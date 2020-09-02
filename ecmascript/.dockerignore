@@ -1,0 +1,14 @@
+.git
+.gitignore
+.dockerignore
+Dockerfile
+README.md
+test
+tmp
+*.bash
+.idea
+*.iml
+.vscode
+node_modules
+.vscode
+package-lock.json

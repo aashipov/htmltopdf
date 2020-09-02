@@ -1,0 +1,131 @@
+FROM centos:7 AS dummy
+ARG DUMMY_USER=dummy
+ARG UID_GID=10001
+RUN groupadd -g ${UID_GID} ${DUMMY_USER} && useradd -m -u ${UID_GID} -d /${DUMMY_USER}/ -g ${DUMMY_USER} ${DUMMY_USER}
+
+# DOCKER_BUILDKIT=1 docker build . --file=docker/Dockerfile.centos --target=wknch --tag=aashipov/htmltopdf:centos-wknch && docker push aashipov/htmltopdf:centos-wknch
+FROM dummy AS wknch
+ARG WKHTMLTOX_PACKAGE=wkhtmltox-0.12.6-1.centos7.x86_64.rpm
+ENV centos_FRONTEND=noninteractive
+ADD https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/${WKHTMLTOX_PACKAGE} /tmp/
+RUN yum -y install epel-release && yum -y update && yum -y install chromium-headless fontconfig liberation-fonts file /tmp/${WKHTMLTOX_PACKAGE} && \
+yum clean all && rm -rf /tmp/${WKHTMLTOX_PACKAGE} && \
+ln -s /usr/lib64/chromium-browser/headless_shell /usr/bin/chromium
+
+# DOCKER_BUILDKIT=1 docker build . --file=docker/Dockerfile.centos --target=maven --tag=aashipov/htmltopdf:centos-maven && docker push aashipov/htmltopdf:centos-maven
+FROM aashipov/htmltopdf:centos-wknch AS maven
+ARG JDK_ARCHIVE=jdk17u-linux-x86_64-jdk-17.0.6+10.tar.gz
+ARG MAVEN_ARCHIVE=apache-maven-3.9.1-bin.tar.gz
+ENV JAVA_HOME=/opt/java
+ENV M2_HOME=/opt/maven
+ENV PATH=${JAVA_HOME}/bin:${M2_HOME}/bin:${PATH}
+ADD https://github.com/aashipov/openjdk-build/releases/download/1.0.0/${JDK_ARCHIVE} /tmp/
+ADD https://dlcdn.apache.org/maven/maven-3/3.9.1/binaries/${MAVEN_ARCHIVE} /tmp/
+RUN mkdir -p ${JAVA_HOME} ${M2_HOME} && \
+tar -xzf /tmp/${JDK_ARCHIVE} -C ${JAVA_HOME} --strip-components=1 && \
+find "${JAVA_HOME}" -type f -name '*.debuginfo' -exec rm {} \; && \
+find "${JAVA_HOME}" -type f -name '*.diz' -exec rm {} \; && \
+rm -rf ${JAVA_HOME}/demo/ ${JAVA_HOME}/lib/src.zip ${JAVA_HOME}/man/ && \
+tar -xzf /tmp/${MAVEN_ARCHIVE} -C ${M2_HOME} --strip-components=1 && \
+java --version && mvn --version && \
+rm -rf /tmp/${JDK_ARCHIVE} /tmp/${MAVEN_ARCHIVE}
+
+# DOCKER_BUILDKIT=1 docker build . --file=docker/Dockerfile.centos --target=jre --tag=aashipov/htmltopdf:centos-jre && docker push aashipov/htmltopdf:centos-jre
+FROM aashipov/htmltopdf:centos-wknch AS jre
+ARG JRE_ARCHIVE=jre17u-linux-x86_64-jdk-17.0.6+10.tar.gz
+ENV JAVA_HOME=/opt/java
+ENV PATH=${JAVA_HOME}/bin:${PATH}
+ADD https://github.com/aashipov/openjdk-build/releases/download/1.0.0/${JRE_ARCHIVE} /tmp/
+RUN mkdir -p ${JAVA_HOME} && \
+tar -xzf /tmp/${JRE_ARCHIVE} -C ${JAVA_HOME} --strip-components=1 && \
+find "${JAVA_HOME}" -type f -name '*.debuginfo' -exec rm {} \; && \
+find "${JAVA_HOME}" -type f -name '*.diz' -exec rm {} \; && \
+rm -rf ${JAVA_HOME}/demo/ ${JAVA_HOME}/lib/src.zip ${JAVA_HOME}/man/ && \
+java --version && \
+rm -rf /tmp/${JRE_ARCHIVE}
+
+# DOCKER_BUILDKIT=1 docker build . --file=docker/Dockerfile.centos --target=golang --tag=aashipov/htmltopdf:centos-golang && docker push aashipov/htmltopdf:centos-golang
+FROM aashipov/htmltopdf:centos-wknch AS golang
+ARG GOLANG_ARCHIVE=go1.20.2.linux-amd64.tar.gz
+ADD https://go.dev/dl/${GOLANG_ARCHIVE} /tmp/
+ENV GOROOT=/opt/go
+ENV PATH=${GOROOT}/bin:${PATH}
+RUN mkdir -p ${GOROOT} && \
+tar -xzf /tmp/${GOLANG_ARCHIVE} -C ${GOROOT} --strip-components=1 && \
+go version
+
+# DOCKER_BUILDKIT=1 docker build . --file=docker/Dockerfile.centos --target=nodejs --tag=aashipov/htmltopdf:centos-nodejs && docker push aashipov/htmltopdf:centos-nodejs
+FROM aashipov/htmltopdf:centos-wknch AS nodejs
+ARG NODEJS_ARCHIVE=node-v16.20.0-linux-x64.tar.gz
+ADD https://nodejs.org/dist/latest-v16.x/${NODEJS_ARCHIVE} /tmp/
+ENV NODE_HOME=/opt/nodejs
+ENV PATH=${NODE_HOME}/bin:${PATH}
+RUN mkdir -p ${NODE_HOME} && \
+tar -xzf /tmp/${NODEJS_ARCHIVE} -C ${NODE_HOME} --strip-components=1 && \
+npm i -g node-prune && node --version
+
+### cdp & chromedp
+FROM aashipov/htmltopdf:centos-golang AS golangbuilder
+ARG DUMMY_USER=dummy
+ARG BUILD_DIR=/${DUMMY_USER}
+USER root
+WORKDIR ${BUILD_DIR}
+COPY --chown=${DUMMY_USER}:${DUMMY_USER} ./ ./
+USER ${DUMMY_USER}
+RUN go build && go test
+
+# DOCKER_BUILDKIT=1 docker build go --file=docker/Dockerfile.centos --target=golangresult --tag=aashipov/htmltopdf:centos-go && docker push aashipov/htmltopdf:centos-go
+FROM aashipov/htmltopdf:centos-wknch AS golangresult
+ARG DUMMY_USER=dummy
+ARG BUILD_DIR=/${DUMMY_USER}
+USER root
+EXPOSE 8080
+COPY --from=golangbuilder --chown=${DUMMY_USER}:${DUMMY_USER} ${BUILD_DIR}/htmltopdf /${DUMMY_USER}/
+WORKDIR /${DUMMY_USER}/
+USER ${DUMMY_USER}
+CMD /dummy/htmltopdf
+
+### java
+FROM aashipov/htmltopdf:centos-maven AS mavenbuilder
+ARG DUMMY_USER=dummy
+ARG BUILD_DIR=/${DUMMY_USER}
+USER root
+WORKDIR ${BUILD_DIR}
+COPY --chown=${DUMMY_USER}:${DUMMY_USER} ./ ./
+USER ${DUMMY_USER}
+WORKDIR ${BUILD_DIR}
+RUN mvn clean package -Dmaven.wagon.http.ssl.insecure=true -Dmaven.wagon.http.ssl.allowall=true -Dmaven.wagon.http.ssl.ignore.validity.dates=true
+
+# DOCKER_BUILDKIT=1 docker build java/pure --file=docker/Dockerfile.centos --target=javaresult --tag=aashipov/htmltopdf:centos-pure && docker push aashipov/htmltopdf:centos-pure
+# DOCKER_BUILDKIT=1 docker build java/spring-boot-web --file=docker/Dockerfile.centos --target=javaresult --tag=aashipov/htmltopdf:centos-spring-boot-web && docker push aashipov/htmltopdf:centos-spring-boot-web
+# DOCKER_BUILDKIT=1 docker build java/spring-boot-webflux --file=docker/Dockerfile.centos --target=javaresult --tag=aashipov/htmltopdf:centos-spring-boot-webflux && docker push aashipov/htmltopdf:centos-spring-boot-webflux
+# DOCKER_BUILDKIT=1 docker build java/ktor --file=docker/Dockerfile.centos --target=javaresult --tag=aashipov/htmltopdf:centos-ktor && docker push aashipov/htmltopdf:centos-ktor
+# DOCKER_BUILDKIT=1 docker build java/tomcat --file=docker/Dockerfile.centos --target=javaresult --tag=aashipov/htmltopdf:centos-tomcat && docker push aashipov/htmltopdf:centos-tomcat
+FROM aashipov/htmltopdf:centos-jre AS javaresult
+ARG DUMMY_USER=dummy
+ARG BUILD_DIR=/${DUMMY_USER}
+USER root
+COPY --from=mavenbuilder --chown=${DUMMY_USER}:${DUMMY_USER} ${BUILD_DIR}/target/htmltopdf*shaded.jar /dummy/app.jar
+WORKDIR /${DUMMY_USER}/
+EXPOSE 8080
+USER ${DUMMY_USER}
+CMD java -jar app.jar
+
+# nodejs
+FROM aashipov/htmltopdf:centos-nodejs AS nodejsbuilder
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+USER root
+WORKDIR /dummy/
+COPY --chown=dummy:dummy ./ ./
+USER dummy
+RUN npm install --production --omit=dev && npm prune --production --omit=dev && node-prune
+
+# DOCKER_BUILDKIT=1 docker build ecmascript --file=docker/Dockerfile.centos --target=nodejsresult --tag=aashipov/htmltopdf:centos-ecmascript && docker push aashipov/htmltopdf:centos-ecmascript
+FROM aashipov/htmltopdf:centos-nodejs AS nodejsresult
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+USER root
+EXPOSE 8080
+COPY --from=nodejsbuilder --chown=dummy:dummy /dummy/ /dummy/
+WORKDIR /dummy/
+USER dummy
+CMD node server.js
