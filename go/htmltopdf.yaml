@@ -1,0 +1,85 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: htmltopdf
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: htmltopdf
+  labels:
+    app: htmltopdf
+  namespace: htmltopdf
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: htmltopdf
+  template:
+    metadata:
+      labels:
+        app: htmltopdf
+    spec:
+      containers:
+      - name: htmltopdf
+        image: aashipov/htmltopdf:debian-go
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 3
+        volumeMounts:
+        - mountPath: /dummy/tmp
+          name: tmp-volume
+      volumes:
+        - name: tmp-volume
+          emptyDir:
+            medium: Memory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: htmltopdf
+  namespace: htmltopdf
+spec:
+  selector:
+    app: htmltopdf
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: htmltopdf
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+  namespace: htmltopdf
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /pdf
+        pathType: Prefix
+        backend:
+          service:
+            name: htmltopdf
+            port:
+              number: 8080

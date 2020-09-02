@@ -13,3 +13,16 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+/tmp/
+/.idea/
+*.iml
+/target/
+.classpath
+.project
+.settings
+.vscode
+/.config/
+/.gradle/
+/build/
+dependency-reduced-pom.xml

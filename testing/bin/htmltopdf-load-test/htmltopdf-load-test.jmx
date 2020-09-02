@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.4.1">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="Test Plan" enabled="true">
+      <stringProp name="TestPlan.comments"></stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+        <collectionProp name="Arguments.arguments"/>
+      </elementProp>
+      <stringProp name="TestPlan.user_define_classpath"></stringProp>
+    </TestPlan>
+    <hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Thread Group" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">${loopCount}</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">${threadCount}</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">${rampUp}</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">false</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="Variables" enabled="true">
+          <collectionProp name="Arguments.arguments">
+            <elementProp name="host" elementType="Argument">
+              <stringProp name="Argument.name">host</stringProp>
+              <stringProp name="Argument.value">host.to.test:8080</stringProp>
+              <stringProp name="Argument.metadata">=</stringProp>
+              <stringProp name="Argument.desc">Host, port and path, e.g. localhost:8080/pdf</stringProp>
+            </elementProp>
+            <elementProp name="converter" elementType="Argument">
+              <stringProp name="Argument.name">converter</stringProp>
+              <stringProp name="Argument.value">html</stringProp>
+              <stringProp name="Argument.desc">Either html or chromium</stringProp>
+              <stringProp name="Argument.metadata">=</stringProp>
+            </elementProp>
+            <elementProp name="threadCount" elementType="Argument">
+              <stringProp name="Argument.name">threadCount</stringProp>
+              <stringProp name="Argument.value">100</stringProp>
+              <stringProp name="Argument.desc">How many users</stringProp>
+              <stringProp name="Argument.metadata">=</stringProp>
+            </elementProp>
+            <elementProp name="loopCount" elementType="Argument">
+              <stringProp name="Argument.name">loopCount</stringProp>
+              <stringProp name="Argument.value">100</stringProp>
+              <stringProp name="Argument.desc">How many requests per user</stringProp>
+              <stringProp name="Argument.metadata">=</stringProp>
+            </elementProp>
+            <elementProp name="rampUp" elementType="Argument">
+              <stringProp name="Argument.name">rampUp</stringProp>
+              <stringProp name="Argument.value">1</stringProp>
+              <stringProp name="Argument.metadata">=</stringProp>
+            </elementProp>
+          </collectionProp>
+        </Arguments>
+        <hashTree/>
+        <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Basic Auth" enabled="true">
+          <collectionProp name="HeaderManager.headers">
+            <elementProp name="" elementType="Header">
+              <stringProp name="Header.name">Authorization</stringProp>
+              <stringProp name="Header.value">Basic dXNlcjpwYXNzd29yZA==</stringProp>
+            </elementProp>
+          </collectionProp>
+          <stringProp name="TestPlan.comments">user:password</stringProp>
+        </HeaderManager>
+        <hashTree/>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="invoice" enabled="true">
+          <elementProp name="HTTPsampler.Files" elementType="HTTPFileArgs">
+            <collectionProp name="HTTPFileArgs.files">
+              <elementProp name="/dummy/jmeter/bin/htmltopdf-load-test/invoice/dimension.png" elementType="HTTPFileArg">
+                <stringProp name="File.path">/dummy/jmeter/bin/htmltopdf-load-test/invoice/dimension.png</stringProp>
+                <stringProp name="File.paramname">files</stringProp>
+                <stringProp name="File.mimetype"></stringProp>
+              </elementProp>
+              <elementProp name="/dummy/jmeter/bin/htmltopdf-load-test/invoice/Roboto-Bold.ttf" elementType="HTTPFileArg">
+                <stringProp name="File.path">/dummy/jmeter/bin/htmltopdf-load-test/invoice/Roboto-Bold.ttf</stringProp>
+                <stringProp name="File.paramname">files</stringProp>
+                <stringProp name="File.mimetype"></stringProp>
+              </elementProp>
+              <elementProp name="/dummy/jmeter/bin/htmltopdf-load-test/invoice/Roboto-Regular.ttf" elementType="HTTPFileArg">
+                <stringProp name="File.path">/dummy/jmeter/bin/htmltopdf-load-test/invoice/Roboto-Regular.ttf</stringProp>
+                <stringProp name="File.paramname">files</stringProp>
+                <stringProp name="File.mimetype"></stringProp>
+              </elementProp>
+              <elementProp name="/dummy/jmeter/bin/htmltopdf-load-test/invoice/logo.png" elementType="HTTPFileArg">
+                <stringProp name="File.path">/dummy/jmeter/bin/htmltopdf-load-test/invoice/logo.png</stringProp>
+                <stringProp name="File.paramname">files</stringProp>
+                <stringProp name="File.mimetype"></stringProp>
+              </elementProp>
+              <elementProp name="/dummy/jmeter/bin/htmltopdf-load-test/invoice/index.html" elementType="HTTPFileArg">
+                <stringProp name="File.path">/dummy/jmeter/bin/htmltopdf-load-test/invoice/index.html</stringProp>
+                <stringProp name="File.paramname">files</stringProp>
+                <stringProp name="File.mimetype"></stringProp>
+              </elementProp>
+              <elementProp name="/dummy/jmeter/bin/htmltopdf-load-test/invoice/style.css" elementType="HTTPFileArg">
+                <stringProp name="File.path">/dummy/jmeter/bin/htmltopdf-load-test/invoice/style.css</stringProp>
+                <stringProp name="File.paramname">files</stringProp>
+                <stringProp name="File.mimetype"></stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain"></stringProp>
+          <stringProp name="HTTPSampler.port"></stringProp>
+          <stringProp name="HTTPSampler.protocol"></stringProp>
+          <stringProp name="HTTPSampler.contentEncoding"></stringProp>
+          <stringProp name="HTTPSampler.path">http://${host}/${converter}/top10/right10/bottom10</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">false</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.implementation">Java</stringProp>
+          <stringProp name="HTTPSampler.connect_timeout"></stringProp>
+          <stringProp name="HTTPSampler.response_timeout"></stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <ResultSaver guiclass="ResultSaverGui" testclass="ResultSaver" testname="Save PDF" enabled="true">
+            <stringProp name="FileSaver.filename">/dummy/jmeter/bin/htmltopdf-load-test/invoicepdf/${__machineName()}/</stringProp>
+            <boolProp name="FileSaver.errorsonly">false</boolProp>
+            <boolProp name="FileSaver.successonly">false</boolProp>
+            <boolProp name="FileSaver.skipsuffix">false</boolProp>
+            <boolProp name="FileSaver.skipautonumber">false</boolProp>
+            <boolProp name="FileSaver.addTimstamp">true</boolProp>
+          </ResultSaver>
+          <hashTree/>
+        </hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="table" enabled="true">
+          <elementProp name="HTTPsampler.Files" elementType="HTTPFileArgs">
+            <collectionProp name="HTTPFileArgs.files">
+              <elementProp name="/dummy/jmeter/bin/htmltopdf-load-test/table/index.html" elementType="HTTPFileArg">
+                <stringProp name="File.path">/dummy/jmeter/bin/htmltopdf-load-test/table/index.html</stringProp>
+                <stringProp name="File.paramname">files</stringProp>
+                <stringProp name="File.mimetype"></stringProp>
+              </elementProp>
+              <elementProp name="/dummy/jmeter/bin/htmltopdf-load-test/table/style.css" elementType="HTTPFileArg">
+                <stringProp name="File.path">/dummy/jmeter/bin/htmltopdf-load-test/table/style.css</stringProp>
+                <stringProp name="File.paramname">files</stringProp>
+                <stringProp name="File.mimetype"></stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain"></stringProp>
+          <stringProp name="HTTPSampler.port"></stringProp>
+          <stringProp name="HTTPSampler.protocol"></stringProp>
+          <stringProp name="HTTPSampler.contentEncoding"></stringProp>
+          <stringProp name="HTTPSampler.path">http://${host}/${converter}/top25/right18/bottom20/left19</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">false</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"></stringProp>
+          <stringProp name="HTTPSampler.implementation">Java</stringProp>
+          <stringProp name="HTTPSampler.connect_timeout"></stringProp>
+          <stringProp name="HTTPSampler.response_timeout"></stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <ResultSaver guiclass="ResultSaverGui" testclass="ResultSaver" testname="Save PDF" enabled="true">
+            <stringProp name="FileSaver.filename">/dummy/jmeter/bin/htmltopdf-load-test/tablepdf/${__machineName()}/</stringProp>
+            <boolProp name="FileSaver.errorsonly">false</boolProp>
+            <boolProp name="FileSaver.successonly">false</boolProp>
+            <boolProp name="FileSaver.skipsuffix">false</boolProp>
+            <boolProp name="FileSaver.skipautonumber">false</boolProp>
+            <boolProp name="FileSaver.addTimstamp">true</boolProp>
+          </ResultSaver>
+          <hashTree/>
+        </hashTree>
+      </hashTree>
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>

@@ -1,0 +1,83 @@
+version: '3.8'
+
+networks:
+  default:
+    name: ${NETWORK_NAME}
+
+x-volumes:
+  &jmeter-volumes
+  - ./:${JMETER_DIR_IN_CONTAINER}:rw
+
+services:
+
+  jmeter-server1:
+    image: ${JMETER_IMAGE_NAME}
+    hostname: ${JMETER_SERVER_PREFIX}1
+    container_name: ${JMETER_SERVER_PREFIX}1
+    user: ${DUMMY_UID}:${DUMMY_UID}
+    working_dir: ${DUMMY_USER_HOME}
+    command: ${JMETER_SERVER_CMD} -j ${JMETER_DIR_IN_CONTAINER}/server/${JMETER_SERVER_PREFIX}1.log
+    env_file:
+      - '.env'
+    deploy:
+      resources:
+        limits:
+          memory: ${JMETER_CONTAINER_MEMORY_LIMIT}
+    volumes: *jmeter-volumes
+    extra_hosts:
+      host.to.test: ${HOST_TO_TEST}
+  
+  jmeter-server2:
+    image: ${JMETER_IMAGE_NAME}
+    hostname: ${JMETER_SERVER_PREFIX}2
+    container_name: ${JMETER_SERVER_PREFIX}2
+    user: ${DUMMY_UID}:${DUMMY_UID}
+    working_dir: ${DUMMY_USER_HOME}
+    command: ${JMETER_SERVER_CMD} -j ${JMETER_DIR_IN_CONTAINER}/server/${JMETER_SERVER_PREFIX}2.log
+    env_file:
+      - '.env'
+    deploy:
+      resources:
+        limits:
+          memory: ${JMETER_CONTAINER_MEMORY_LIMIT}
+    volumes: *jmeter-volumes
+    extra_hosts:
+      host.to.test: ${HOST_TO_TEST}
+    
+  jmeter-server3:
+    image: ${JMETER_IMAGE_NAME}
+    hostname: ${JMETER_SERVER_PREFIX}3
+    container_name: ${JMETER_SERVER_PREFIX}3
+    user: ${DUMMY_UID}:${DUMMY_UID}
+    working_dir: ${DUMMY_USER_HOME}
+    command: ${JMETER_SERVER_CMD} -j ${JMETER_DIR_IN_CONTAINER}/server/${JMETER_SERVER_PREFIX}1.log
+    env_file:
+      - '.env'
+    deploy:
+      resources:
+        limits:
+          memory: ${JMETER_CONTAINER_MEMORY_LIMIT}
+    volumes: *jmeter-volumes
+    extra_hosts:
+      host.to.test: ${HOST_TO_TEST}
+
+  jmeter-client:
+    image: ${JMETER_IMAGE_NAME}
+    hostname: ${JMETER_CLIENT}
+    container_name: ${JMETER_CLIENT}
+    user: ${DUMMY_UID}:${DUMMY_UID}
+    working_dir: ${DUMMY_USER_HOME}
+    command: ${JMETER_CLIENT_CMD}
+    env_file:
+      - '.env'
+    deploy:
+      resources:
+        limits:
+          memory: ${JMETER_CONTAINER_MEMORY_LIMIT}
+    volumes: *jmeter-volumes
+    extra_hosts:
+      host.to.test: ${HOST_TO_TEST}
+    depends_on:
+     - ${JMETER_SERVER_PREFIX}1
+     - ${JMETER_SERVER_PREFIX}2
+     - ${JMETER_SERVER_PREFIX}3

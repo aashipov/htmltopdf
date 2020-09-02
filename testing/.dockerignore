@@ -1,0 +1,8 @@
+.git
+.gitignore
+.dockerignore
+farm
+tmp
+*bash
+.idea
+*.iml
