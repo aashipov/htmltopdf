@@ -1,0 +1,45 @@
+### HTML to PDF ###
+
+Receive a static HTML-page named ```index.html``` (and optional CSS, graphics, fonts etc) and produce PDF page(s) via ```wkhtmltopdf``` or ```chromium --headless ...```
+
+#### Prior art ####
+
+```https://www.chromium.org```
+
+```https://github.com/wkhtmltopdf/wkhtmltopdf```
+
+```https://github.com/thecodingmachine/gotenberg```
+
+```https://htmlpdfapi.com/blog/free_html5_invoice_templates```
+
+#### How-to ####
+
+App runs on TCP port 8080 by default
+
+Endpoints:
+
+```/``` or ```/health``` responds if program is alive
+
+```/html``` converts via chromium
+
+```/wkhtmltopdf``` converts via wkhtmltopdf (faster)
+
+##### Docker #####
+
+```bash build-and-run.bash```
+
+##### On-premise #####
+
+Install ```curl```, ```bash```, ```wkhtmltopdf``` and ```chromium```, add to $PATH / %PATH%
+
+##### Test #####
+
+```cd temp && bash post.bash```
+
+#### Why Go ####
+
+Modern C
+
+#### License ####
+
+Perl The "Artistic License"
