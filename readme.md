@@ -36,7 +36,7 @@ Install ```curl```, ```bash```, ```wkhtmltopdf``` and ```chromium```, add to $PA
 
 ```cd temp && bash post.bash```
 
-#### Why Go ####
+#### Why Go? ####
 
 Modern C
 
