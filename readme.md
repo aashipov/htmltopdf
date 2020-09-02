@@ -30,7 +30,7 @@ Endpoints:
 
 ##### On-premise #####
 
-Install ```curl```, ```bash```, ```wkhtmltopdf``` and ```chromium```, add to $PATH / %PATH%
+Install ```curl```, ```bash```, [patched ```wkhtmltopdf```](https://wkhtmltopdf.org/downloads.html) and ```chromium```, add to $PATH / %PATH%
 
 ##### Test #####
 
