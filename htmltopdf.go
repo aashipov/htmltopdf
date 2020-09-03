@@ -48,7 +48,7 @@ func getWkhtmltopdfExecutableName() string {
 
 func getChromiumExecutableName() string {
 	if getOsName() == "windows" {
-		return "chromium.exe"
+		return "chrome.exe"
 	}
 	if getOsName() == "linux" {
 		return chromium
