@@ -116,6 +116,18 @@ func health(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("{\"status\":\"UP\"}"))
 }
 
+func buildWkhtmltopdfCmd(workdir string) *exec.Cmd {
+	cmd := exec.Command(wkhtmltopdf, "--enable-local-file-access", "--print-media-type", "--no-stop-slow-scripts", indexHtml, resultPdf)
+	cmd.Dir = workdir
+	return cmd
+}
+
+func buildChromiumCmd(workdir string) *exec.Cmd {
+	cmd := exec.Command(chromium, "--headless", "--no-sandbox", "--disable-setuid-sandbox", "--unlimited-storage", "--disable-dev-shm-usage", "--disable-gpu", "--disable-translate", "--disable-extensions", "--disable-background-networking", "--safebrowsing-disable-auto-update", "--disable-sync", "--disable-default-apps", "--hide-scrollbars", "--metrics-recording-only", "--mute-audio", "--no-first-run", "--virtual-time-budget=1000", "--print-to-pdf="+resultPdf, indexHtml)
+	cmd.Dir = workdir
+	return cmd
+}
+
 func commonHandler(w http.ResponseWriter, r *http.Request) {
 	workdir := getWorkDir()
 	defer os.RemoveAll(workdir)
@@ -132,7 +144,7 @@ func commonHandler(w http.ResponseWriter, r *http.Request) {
 	// HTML to PDF or respond health
 	switch r.URL.String() {
 	case wkhtmltopdfUrl:
-		cmd := exec.Command(wkhtmltopdf, "--enable-local-file-access", "--print-media-type", "--no-stop-slow-scripts", filepath.Join(workdir, indexHtml), currentPdfFile)
+		cmd := buildWkhtmltopdfCmd(workdir)
 		log.Printf("%s : %s\n", wkhtmltopdf, currentPdfFile)
 		if _, err := cmd.CombinedOutput(); isError(err) {
 			log.Print(err)
@@ -140,7 +152,7 @@ func commonHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case htmlUrl:
-		cmd := exec.Command(chromium, "--headless", "--no-sandbox", "--disable-setuid-sandbox", "--unlimited-storage", "--disable-dev-shm-usage", "--disable-gpu", "--disable-translate", "--disable-extensions", "--disable-background-networking", "--safebrowsing-disable-auto-update", "--disable-sync", "--disable-default-apps", "--hide-scrollbars", "--metrics-recording-only", "--mute-audio", "--no-first-run", "--virtual-time-budget=1000", "--print-to-pdf="+currentPdfFile, filepath.Join(workdir, indexHtml))
+		cmd := buildChromiumCmd(workdir)
 		log.Printf("%s : %s\n", chromium, currentPdfFile)
 		if out, err := cmd.CombinedOutput(); isError(err) {
 			log.Print(string(out))
