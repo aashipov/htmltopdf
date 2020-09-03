@@ -132,7 +132,7 @@ func commonHandler(w http.ResponseWriter, r *http.Request) {
 	// HTML to PDF or respond health
 	switch r.URL.String() {
 	case wkhtmltopdfUrl:
-		cmd := exec.Command(wkhtmltopdf, "--enable-local-file-access", filepath.Join(workdir, indexHtml), currentPdfFile)
+		cmd := exec.Command(wkhtmltopdf, "--enable-local-file-access", "--print-media-type", "--no-stop-slow-scripts", filepath.Join(workdir, indexHtml), currentPdfFile)
 		log.Printf("%s : %s\n", wkhtmltopdf, currentPdfFile)
 		if _, err := cmd.CombinedOutput(); isError(err) {
 			log.Print(err)
