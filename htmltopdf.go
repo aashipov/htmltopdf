@@ -9,20 +9,52 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strconv"
 )
 
 const (
-	wkhtmltopdf    = "wkhtmltopdf"
-	chromium       = "chromium"
-	indexHtml      = "index.html"
-	resultPdf      = "result.pdf"
-	noIndexHtml    = "No index.html"
-	slash          = "/"
-	wkhtmltopdfUrl = slash + wkhtmltopdf
-	htmlUrl        = slash + "html"
+	wkhtmltopdf     = "wkhtmltopdf"
+	chromium        = "chromium"
+	indexHtml       = "index.html"
+	resultPdf       = "result.pdf"
+	noIndexHtml     = "No index.html"
+	slash           = "/"
+	wkhtmltopdfUrl  = slash + wkhtmltopdf
+	htmlUrl         = slash + "html"
+	notAnExecutable = "notAnExecutable"
 )
+
+var (
+	wkhtmltopdfExecutableName = getWkhtmltopdfExecutableName()
+	chromiumExecutableName    = getChromiumExecutableName()
+)
+
+func getOsName() string {
+	return runtime.GOOS
+}
+
+func getWkhtmltopdfExecutableName() string {
+	if getOsName() == "windows" {
+		return "wkhtmltopdf.exe"
+	}
+	if getOsName() == "linux" {
+		return wkhtmltopdf
+	}
+	return notAnExecutable
+}
+
+func getChromiumExecutableName() string {
+	if getOsName() == "windows" {
+		return "chromium.exe"
+	}
+	if getOsName() == "linux" {
+		return chromium
+	}
+	return notAnExecutable
+}
 
 func isError(err error) bool {
 	if err != nil {
@@ -117,13 +149,13 @@ func health(w http.ResponseWriter, r *http.Request) {
 }
 
 func buildWkhtmltopdfCmd(workdir string) *exec.Cmd {
-	cmd := exec.Command(wkhtmltopdf, "--enable-local-file-access", "--print-media-type", "--no-stop-slow-scripts", indexHtml, resultPdf)
+	cmd := exec.Command(wkhtmltopdfExecutableName, "--enable-local-file-access", "--print-media-type", "--no-stop-slow-scripts", indexHtml, resultPdf)
 	cmd.Dir = workdir
 	return cmd
 }
 
 func buildChromiumCmd(workdir string) *exec.Cmd {
-	cmd := exec.Command(chromium, "--headless", "--no-sandbox", "--disable-setuid-sandbox", "--unlimited-storage", "--disable-dev-shm-usage", "--disable-gpu", "--disable-translate", "--disable-extensions", "--disable-background-networking", "--safebrowsing-disable-auto-update", "--disable-sync", "--disable-default-apps", "--hide-scrollbars", "--metrics-recording-only", "--mute-audio", "--no-first-run", "--virtual-time-budget=1000", "--print-to-pdf="+resultPdf, indexHtml)
+	cmd := exec.Command(chromiumExecutableName, "--headless", "--no-sandbox", "--disable-setuid-sandbox", "--unlimited-storage", "--disable-dev-shm-usage", "--disable-gpu", "--disable-translate", "--disable-extensions", "--disable-background-networking", "--safebrowsing-disable-auto-update", "--disable-sync", "--disable-default-apps", "--hide-scrollbars", "--metrics-recording-only", "--mute-audio", "--no-first-run", "--virtual-time-budget=1000", "--print-to-pdf="+resultPdf, indexHtml)
 	cmd.Dir = workdir
 	return cmd
 }
@@ -171,5 +203,16 @@ func commonHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	http.HandleFunc(slash, commonHandler)
-	http.ListenAndServe(":8080", nil)
+	server := http.Server{Addr: ":8080", Handler: nil}
+
+	gracefulShutdown := make(chan os.Signal)
+	signal.Notify(gracefulShutdown)
+	go func() {
+		sig := <-gracefulShutdown
+		log.Printf("%s received, shutdown", sig)
+		server.Close()
+		os.Exit(0)
+	}()
+
+	server.ListenAndServe()
 }
