@@ -149,13 +149,13 @@ func health(w http.ResponseWriter, r *http.Request) {
 }
 
 func buildWkhtmltopdfCmd(workdir string) *exec.Cmd {
-	cmd := exec.Command(wkhtmltopdfExecutableName, "--enable-local-file-access", "--print-media-type", "--no-stop-slow-scripts", indexHtml, resultPdf)
+	cmd := exec.Command(wkhtmltopdfExecutableName, "--enable-local-file-access", "--print-media-type", "--no-stop-slow-scripts", filepath.Join(workdir, indexHtml), filepath.Join(workdir, resultPdf))
 	cmd.Dir = workdir
 	return cmd
 }
 
 func buildChromiumCmd(workdir string) *exec.Cmd {
-	cmd := exec.Command(chromiumExecutableName, "--headless", "--no-sandbox", "--disable-setuid-sandbox", "--unlimited-storage", "--disable-dev-shm-usage", "--disable-gpu", "--disable-translate", "--disable-extensions", "--disable-background-networking", "--safebrowsing-disable-auto-update", "--disable-sync", "--disable-default-apps", "--hide-scrollbars", "--metrics-recording-only", "--mute-audio", "--no-first-run", "--virtual-time-budget=1000", "--print-to-pdf="+resultPdf, indexHtml)
+	cmd := exec.Command(chromiumExecutableName, "--headless", "--no-sandbox", "--disable-setuid-sandbox", "--unlimited-storage", "--disable-dev-shm-usage", "--disable-gpu", "--disable-translate", "--disable-extensions", "--disable-background-networking", "--safebrowsing-disable-auto-update", "--disable-sync", "--disable-default-apps", "--hide-scrollbars", "--metrics-recording-only", "--mute-audio", "--no-first-run", "--virtual-time-budget=1000", "--print-to-pdf="+filepath.Join(workdir, resultPdf), filepath.Join(workdir, indexHtml))
 	cmd.Dir = workdir
 	return cmd
 }
