@@ -26,6 +26,8 @@ HTTP Endpoints:
 
 ```bash build-and-run.bash```
 
+The preferred way, chromium zombies in container
+
 ##### On-premise #####
 
 Install ```curl```, ```bash```, [patched ```wkhtmltopdf```](https://wkhtmltopdf.org/downloads.html), ```chromium / chrome.exe```, add to ```$PATH / %PATH%```

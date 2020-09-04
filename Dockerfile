@@ -2,7 +2,7 @@ FROM centos:7 AS base
 ARG WKHTMLTOX_VERSION=0.12.6-1
 ARG WKHTMLTOX_RPM=wkhtmltox-$WKHTMLTOX_VERSION.centos7.x86_64.rpm
 ADD https://github.com/wkhtmltopdf/packaging/releases/download/$WKHTMLTOX_VERSION/$WKHTMLTOX_RPM /tmp/
-# An unprivileged user, no need in chromium sandboxing or seccomp
+# An unprivileged user without sudo, no need in chromium sandboxing or seccomp
 RUN groupadd dummy ; useradd -d /dummy/ -m -g dummy dummy ; \
 yum install -y epel-release ; yum update -y ; \
 # we only need chromium-headless, but there are missing files only available in chromium package https://github.com/elastic/kibana/issues/28408
@@ -11,7 +11,7 @@ yum clean all ; ln -s /usr/lib64/chromium-browser/headless_shell /usr/bin/chromi
 
 FROM base AS builder
 USER root
-RUN sudo rpm --import https://mirror.go-repo.io/centos/RPM-GPG-KEY-GO-REPO ; \
+RUN rpm --import https://mirror.go-repo.io/centos/RPM-GPG-KEY-GO-REPO ; \
 curl -s https://mirror.go-repo.io/centos/go-repo.repo | tee /etc/yum.repos.d/go-repo.repo
 RUN yum install -y chromium golang
 WORKDIR /dummy/

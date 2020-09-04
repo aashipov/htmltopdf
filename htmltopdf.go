@@ -164,16 +164,22 @@ func buildChromiumCmd(workdir string, ctx context.Context) *exec.Cmd {
 	return cmd
 }
 
+func buildCmd(executableName string, workdir string, ctx context.Context) (*exec.Cmd, error) {
+	if chromium == executableName {
+		return buildChromiumCmd(workdir, ctx), nil
+	} else if wkhtmltopdf == executableName {
+		return buildWkhtmltopdfCmd(workdir, ctx), nil
+	} else {
+		return nil, errors.New("Unknown executable " + executableName)
+	}
+}
+
 func callExecutable(executableName string, workdir string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), osCmdTimeout)
 	defer cancel()
-	var cmd *exec.Cmd
-	if chromium == executableName {
-		cmd = buildChromiumCmd(workdir, ctx)
-	} else if wkhtmltopdf == executableName {
-		cmd = buildWkhtmltopdfCmd(workdir, ctx)
-	} else {
-		return errors.New("Unknown executable " + executableName)
+	cmd, err := buildCmd(executableName, workdir, ctx)
+	if isError(err) {
+		return err
 	}
 	log.Printf("executing %s in %s", executableName, workdir)
 	return cmd.Run()
