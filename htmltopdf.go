@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"syscall"
 )
 
 const (
@@ -201,18 +202,20 @@ func commonHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func main() {
-	http.HandleFunc(slash, commonHandler)
-	server := http.Server{Addr: ":8080", Handler: nil}
-
+func enableGracefulShutdown(server *http.Server) {
 	gracefulShutdown := make(chan os.Signal)
-	signal.Notify(gracefulShutdown)
+	signal.Notify(gracefulShutdown, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		sig := <-gracefulShutdown
 		log.Printf("%s received, shutdown", sig)
 		server.Close()
 		os.Exit(0)
 	}()
+}
 
+func main() {
+	http.HandleFunc(slash, commonHandler)
+	server := http.Server{Addr: ":8080", Handler: nil}
+	enableGracefulShutdown(&server)
 	server.ListenAndServe()
 }
