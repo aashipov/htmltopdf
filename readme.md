@@ -1,6 +1,6 @@
 ### HTML to PDF ###
 
-Receive a static HTML-page named ```index.html``` (and optional CSS, graphics, fonts etc) and produce PDF page(s) via ```wkhtmltopdf``` or ```chromium --headless ...```
+Receive a static HTML-page named ```index.html``` (and optional CSS, graphics, fonts etc) and produce PDF page(s) via ```wkhtmltopdf``` or ```chromium --headless ... --print-to-pdf=...```
 
 #### Prior art ####
 
@@ -9,8 +9,6 @@ Receive a static HTML-page named ```index.html``` (and optional CSS, graphics, f
 ```https://github.com/wkhtmltopdf/wkhtmltopdf```
 
 ```https://github.com/thecodingmachine/gotenberg```
-
-```https://htmlpdfapi.com/blog/free_html5_invoice_templates```
 
 #### How-to ####
 
