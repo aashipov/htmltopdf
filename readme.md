@@ -12,9 +12,9 @@ Receive a static HTML-page named ```index.html``` (and optional CSS, graphics, f
 
 #### How-to ####
 
-App runs on TCP port 8080 by default
+Runs on TCP port 8080
 
-Endpoints:
+HTTP Endpoints:
 
 ```/``` or ```/health``` responds if program is alive
 
@@ -28,7 +28,7 @@ Endpoints:
 
 ##### On-premise #####
 
-Install ```curl```, ```bash```, [patched ```wkhtmltopdf```](https://wkhtmltopdf.org/downloads.html) and ```chromium / chrome.exe```, add to $PATH / %PATH%
+Install ```curl```, ```bash```, [patched ```wkhtmltopdf```](https://wkhtmltopdf.org/downloads.html), ```chromium / chrome.exe```, add to ```$PATH / %PATH%```
 
 ##### Test #####
 
