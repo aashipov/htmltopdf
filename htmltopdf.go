@@ -175,9 +175,6 @@ func callExecutable(executableName string, workdir string) error {
 	} else {
 		return errors.New("Unknown executable " + executableName)
 	}
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Pdeathsig: syscall.SIGKILL,
-	}
 	log.Printf("executing %s in %s", executableName, workdir)
 	return cmd.Run()
 }
