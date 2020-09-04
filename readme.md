@@ -18,9 +18,9 @@ HTTP Endpoints:
 
 ```/``` or ```/health``` responds if program is alive
 
-```/html``` converts via chromium
+```/html``` converts via chromium (slower, produces zombies)
 
-```/wkhtmltopdf``` converts via wkhtmltopdf (faster)
+```/wkhtmltopdf``` converts via wkhtmltopdf (faster, won't produce zombies)
 
 ##### Docker #####
 

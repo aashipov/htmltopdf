@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"io"
 	"log"
@@ -14,6 +15,7 @@ import (
 	"runtime"
 	"strconv"
 	"syscall"
+	"time"
 )
 
 const (
@@ -26,6 +28,7 @@ const (
 	wkhtmltopdfUrl  = slash + wkhtmltopdf
 	htmlUrl         = slash + "html"
 	notAnExecutable = "notAnExecutable"
+	osCmdTimeout    = 30 * time.Second
 )
 
 var (
@@ -149,16 +152,34 @@ func health(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("{\"status\":\"UP\"}"))
 }
 
-func buildWkhtmltopdfCmd(workdir string) *exec.Cmd {
-	cmd := exec.Command(wkhtmltopdfExecutableName, "--enable-local-file-access", "--print-media-type", "--no-stop-slow-scripts", filepath.Join(workdir, indexHtml), filepath.Join(workdir, resultPdf))
+func buildWkhtmltopdfCmd(workdir string, ctx context.Context) *exec.Cmd {
+	cmd := exec.CommandContext(ctx, wkhtmltopdfExecutableName, "--enable-local-file-access", "--print-media-type", "--no-stop-slow-scripts", filepath.Join(workdir, indexHtml), filepath.Join(workdir, resultPdf))
 	cmd.Dir = workdir
 	return cmd
 }
 
-func buildChromiumCmd(workdir string) *exec.Cmd {
-	cmd := exec.Command(chromiumExecutableName, "--headless", "--no-sandbox", "--disable-setuid-sandbox", "--unlimited-storage", "--disable-dev-shm-usage", "--disable-gpu", "--disable-translate", "--disable-extensions", "--disable-background-networking", "--safebrowsing-disable-auto-update", "--disable-sync", "--disable-default-apps", "--hide-scrollbars", "--metrics-recording-only", "--mute-audio", "--no-first-run", "--virtual-time-budget=1000", "--print-to-pdf="+filepath.Join(workdir, resultPdf), filepath.Join(workdir, indexHtml))
+func buildChromiumCmd(workdir string, ctx context.Context) *exec.Cmd {
+	cmd := exec.CommandContext(ctx, chromiumExecutableName, "--headless", "--no-sandbox", "--disable-setuid-sandbox", "--unlimited-storage", "--disable-dev-shm-usage", "--disable-gpu", "--disable-translate", "--disable-extensions", "--disable-background-networking", "--safebrowsing-disable-auto-update", "--disable-sync", "--disable-default-apps", "--hide-scrollbars", "--metrics-recording-only", "--mute-audio", "--no-first-run", "--virtual-time-budget=1000", "--print-to-pdf="+filepath.Join(workdir, resultPdf), filepath.Join(workdir, indexHtml))
 	cmd.Dir = workdir
 	return cmd
+}
+
+func callExecutable(executableName string, workdir string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), osCmdTimeout)
+	defer cancel()
+	var cmd *exec.Cmd
+	if chromium == executableName {
+		cmd = buildChromiumCmd(workdir, ctx)
+	} else if wkhtmltopdf == executableName {
+		cmd = buildWkhtmltopdfCmd(workdir, ctx)
+	} else {
+		return errors.New("Unknown executable " + executableName)
+	}
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Pdeathsig: syscall.SIGKILL,
+	}
+	log.Printf("executing %s in %s", executableName, workdir)
+	return cmd.Run()
 }
 
 func commonHandler(w http.ResponseWriter, r *http.Request) {
@@ -177,18 +198,13 @@ func commonHandler(w http.ResponseWriter, r *http.Request) {
 	// HTML to PDF or respond health
 	switch r.URL.String() {
 	case wkhtmltopdfUrl:
-		cmd := buildWkhtmltopdfCmd(workdir)
-		log.Printf("%s : %s\n", wkhtmltopdf, currentPdfFile)
-		if _, err := cmd.CombinedOutput(); isError(err) {
+		if err := callExecutable(wkhtmltopdf, workdir); isError(err) {
 			log.Print(err)
 			buildInternalServerError(w, err)
 			return
 		}
 	case htmlUrl:
-		cmd := buildChromiumCmd(workdir)
-		log.Printf("%s : %s\n", chromium, currentPdfFile)
-		if out, err := cmd.CombinedOutput(); isError(err) {
-			log.Print(string(out))
+		if err := callExecutable(chromium, workdir); isError(err) {
 			log.Print(err)
 			buildInternalServerError(w, err)
 			return
