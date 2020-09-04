@@ -152,12 +152,6 @@ func health(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("{\"status\":\"UP\"}"))
 }
 
-func buildWkhtmltopdfCmd(workdir string, ctx context.Context) *exec.Cmd {
-	cmd := exec.CommandContext(ctx, wkhtmltopdfExecutableName, "--enable-local-file-access", "--print-media-type", "--no-stop-slow-scripts", filepath.Join(workdir, indexHtml), filepath.Join(workdir, resultPdf))
-	cmd.Dir = workdir
-	return cmd
-}
-
 func buildChromiumCmd(workdir string, ctx context.Context) *exec.Cmd {
 	cmd := exec.CommandContext(ctx, chromiumExecutableName, "--headless", "--no-sandbox", "--disable-setuid-sandbox", "--unlimited-storage", "--disable-dev-shm-usage", "--disable-gpu", "--disable-translate", "--disable-extensions", "--disable-background-networking", "--safebrowsing-disable-auto-update", "--disable-sync", "--disable-default-apps", "--hide-scrollbars", "--metrics-recording-only", "--mute-audio", "--no-first-run", "--virtual-time-budget=1000", "--print-to-pdf="+filepath.Join(workdir, resultPdf), filepath.Join(workdir, indexHtml))
 	cmd.Dir = workdir
@@ -165,13 +159,16 @@ func buildChromiumCmd(workdir string, ctx context.Context) *exec.Cmd {
 }
 
 func buildCmd(executableName string, workdir string, ctx context.Context) (*exec.Cmd, error) {
+	cmd := exec.Cmd{}
 	if chromium == executableName {
-		return buildChromiumCmd(workdir, ctx), nil
+		cmd = *exec.CommandContext(ctx, chromiumExecutableName, "--headless", "--no-sandbox", "--disable-setuid-sandbox", "--unlimited-storage", "--disable-dev-shm-usage", "--disable-gpu", "--disable-translate", "--disable-extensions", "--disable-background-networking", "--safebrowsing-disable-auto-update", "--disable-sync", "--disable-default-apps", "--hide-scrollbars", "--metrics-recording-only", "--mute-audio", "--no-first-run", "--virtual-time-budget=1000", "--print-to-pdf="+filepath.Join(workdir, resultPdf), filepath.Join(workdir, indexHtml))
 	} else if wkhtmltopdf == executableName {
-		return buildWkhtmltopdfCmd(workdir, ctx), nil
+		cmd = *exec.CommandContext(ctx, wkhtmltopdfExecutableName, "--enable-local-file-access", "--print-media-type", "--no-stop-slow-scripts", filepath.Join(workdir, indexHtml), filepath.Join(workdir, resultPdf))
 	} else {
 		return nil, errors.New("Unknown executable " + executableName)
 	}
+	cmd.Dir = workdir
+	return &cmd, nil
 }
 
 func callExecutable(executableName string, workdir string) error {
