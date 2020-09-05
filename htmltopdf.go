@@ -21,6 +21,7 @@ import (
 const (
 	linux           = "linux"
 	windows         = "windows"
+	osName          = runtime.GOOS
 	tmp             = "tmp"
 	wkhtmltopdf     = "wkhtmltopdf"
 	chromium        = "chromium"
@@ -40,20 +41,20 @@ var (
 )
 
 func getWkhtmltopdfExecutableName() string {
-	if windows == runtime.GOOS {
+	if windows == osName {
 		return "wkhtmltopdf.exe"
 	}
-	if linux == runtime.GOOS {
+	if linux == osName {
 		return wkhtmltopdf
 	}
 	return notAnExecutable
 }
 
 func getChromiumExecutableName() string {
-	if windows == runtime.GOOS {
+	if windows == osName {
 		return "chrome.exe"
 	}
-	if linux == runtime.GOOS {
+	if linux == osName {
 		return chromium
 	}
 	return notAnExecutable
