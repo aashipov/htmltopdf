@@ -34,7 +34,9 @@ From Docker Hub ```docker run -d --rm --name=htmltopdf -p 8080:8080  aashipov/ht
 
 ##### On-premise #####
 
-Install ```curl```, ```bash```, [patched ```wkhtmltopdf```](https://wkhtmltopdf.org/downloads.html), ```chromium / chrome.exe```, add to ```$PATH / %PATH%```
+Install ```curl```, ```bash```, [patched ```wkhtmltopdf```](https://wkhtmltopdf.org/downloads.html), ```chromium / chrome.exe```, add to ```PATH```, Go compiler toolchain
+
+```go build && ./htmltopdf```
 
 ##### Test #####
 

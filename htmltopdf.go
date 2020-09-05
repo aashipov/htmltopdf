@@ -19,6 +19,9 @@ import (
 )
 
 const (
+	linux           = "linux"
+	windows         = "windows"
+	tmp             = "tmp"
 	wkhtmltopdf     = "wkhtmltopdf"
 	chromium        = "chromium"
 	indexHtml       = "index.html"
@@ -36,25 +39,21 @@ var (
 	chromiumExecutableName    = getChromiumExecutableName()
 )
 
-func getOsName() string {
-	return runtime.GOOS
-}
-
 func getWkhtmltopdfExecutableName() string {
-	if getOsName() == "windows" {
+	if windows == runtime.GOOS {
 		return "wkhtmltopdf.exe"
 	}
-	if getOsName() == "linux" {
+	if linux == runtime.GOOS {
 		return wkhtmltopdf
 	}
 	return notAnExecutable
 }
 
 func getChromiumExecutableName() string {
-	if getOsName() == "windows" {
+	if windows == runtime.GOOS {
 		return "chrome.exe"
 	}
-	if getOsName() == "linux" {
+	if linux == runtime.GOOS {
 		return chromium
 	}
 	return notAnExecutable
@@ -67,25 +66,17 @@ func isError(err error) bool {
 	return false
 }
 
-func logAndTerminate(err error) {
+// Get request workdir
+func createWorkDir() string {
+	goWorkDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if isError(err) {
 		log.Fatal(err)
 	}
-}
-
-// Get dir this program runs in
-func getGoWorkDir() string {
-	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-	logAndTerminate(err)
-	return dir
-}
-
-// Get request workdir
-func getWorkDir() string {
-	dir := filepath.Join(getGoWorkDir(), "tmp", strconv.Itoa(rand.Int()))
-	err := os.MkdirAll(dir, os.ModePerm)
-	logAndTerminate(err)
-	return dir
+	requestWorkDir := filepath.Join(goWorkDir, tmp, strconv.Itoa(rand.Int()))
+	if err := os.MkdirAll(requestWorkDir, os.ModePerm); isError(err) {
+		log.Fatal(err)
+	}
+	return requestWorkDir
 }
 
 func buildInternalServerError(w http.ResponseWriter, err error) {
@@ -95,7 +86,7 @@ func buildInternalServerError(w http.ResponseWriter, err error) {
 }
 
 // Store files from Multipart
-//http://sanatgersappa.blogspot.com/2013/03/handling-multiple-file-uploads-in-go.html
+// http://sanatgersappa.blogspot.com/2013/03/handling-multiple-file-uploads-in-go.html
 func receiveFiles(w http.ResponseWriter, r *http.Request, workdir string) error {
 	indexHtmlReceived := false
 	reader, err := r.MultipartReader()
@@ -177,7 +168,7 @@ func callExecutable(executableName string, workdir string) error {
 }
 
 func commonHandler(w http.ResponseWriter, r *http.Request) {
-	workdir := getWorkDir()
+	workdir := createWorkDir()
 	defer os.RemoveAll(workdir)
 	// Store multipart
 	switch r.URL.String() {
