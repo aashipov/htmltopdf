@@ -24,13 +24,11 @@ HTTP Endpoints:
 
 ##### Docker #####
 
-The preferred way, chromium zombies in container
-
-Local build & run ```bash build-and-run.bash```
+The preferred way - from Docker Hub ```docker run -d --rm --name=htmltopdf -p 8080:8080  aashipov/htmltopdf:latest```
 
 OR
 
-From Docker Hub ```docker run -d --rm --name=htmltopdf -p 8080:8080  aashipov/htmltopdf:latest```
+Local build & run ```bash build-and-run.bash```
 
 ##### On-premise #####
 
