@@ -10,7 +10,7 @@ REQUEST_PARAMS="--form files=@index.html --form files=@style.css --form files=@l
 
 do_post() {
   FILENAME_PREFIX=$(shuf -i 0-100000 -n 1)
-  curl --request POST --url ${URL_BASE}/wkhtmltopdf --header "Content-Type: multipart/form-data" ${REQUEST_PARAMS} -o ${TMP_DIR}/${FILENAME_PREFIX}-wkhtmltopdf.pdf
+  curl --request POST --url ${URL_BASE}/chromium --header "Content-Type: multipart/form-data" ${REQUEST_PARAMS} -o ${TMP_DIR}/${FILENAME_PREFIX}-chromium.pdf
   curl --request POST --url ${URL_BASE}/html --header 'Content-Type: multipart/form-data' ${REQUEST_PARAMS} -o ${TMP_DIR}/${FILENAME_PREFIX}-html.pdf
   curl ${URL_BASE}/health -o ${TMP_DIR}/${FILENAME_PREFIX}-health.txt
   echo "done ${1}"

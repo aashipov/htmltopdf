@@ -23,14 +23,15 @@ const (
 	windows         = "windows"
 	osName          = runtime.GOOS
 	tmp             = "tmp"
+	html            = "html"
 	wkhtmltopdf     = "wkhtmltopdf"
 	chromium        = "chromium"
-	indexHtml       = "index.html"
+	indexHtml       = "index." + html
 	resultPdf       = "result.pdf"
 	noIndexHtml     = "No index.html"
 	slash           = "/"
-	wkhtmltopdfUrl  = slash + wkhtmltopdf
-	htmlUrl         = slash + "html"
+	htmlUrl         = slash + html
+	chromiumUrl     = slash + chromium
 	notAnExecutable = "notAnExecutable"
 	osCmdTimeout    = 30 * time.Second
 )
@@ -173,7 +174,7 @@ func commonHandler(w http.ResponseWriter, r *http.Request) {
 	defer os.RemoveAll(workdir)
 	// Store multipart
 	switch r.URL.String() {
-	case wkhtmltopdfUrl, htmlUrl:
+	case htmlUrl, chromiumUrl:
 		if err := receiveFiles(w, r, workdir); isError(err) {
 			log.Print(err)
 			buildInternalServerError(w, err)
@@ -183,13 +184,13 @@ func commonHandler(w http.ResponseWriter, r *http.Request) {
 	currentPdfFile := filepath.Join(workdir, resultPdf)
 	// HTML to PDF or respond health
 	switch r.URL.String() {
-	case wkhtmltopdfUrl:
+	case htmlUrl:
 		if err := callExecutable(wkhtmltopdf, workdir); isError(err) {
 			log.Print(err)
 			buildInternalServerError(w, err)
 			return
 		}
-	case htmlUrl:
+	case chromiumUrl:
 		if err := callExecutable(chromium, workdir); isError(err) {
 			log.Print(err)
 			buildInternalServerError(w, err)
