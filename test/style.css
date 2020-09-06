@@ -6,6 +6,17 @@
   }
 }
 
+@font-face {
+  font-family: 'Roboto';
+  src: url(Roboto-Regular.ttf) format('truetype');
+}
+
+@font-face {
+  font-family: 'Roboto';
+  src: url(Roboto-Bold.ttf) format('truetype');
+  font-weight: bold;
+}
+
 .clearfix:after {
   content: "";
   display: table;
@@ -25,9 +36,12 @@ body {
   margin: 0;
   color: #001028;
   background: #FFFFFF; 
-  font-family: Arial, sans-serif; 
-  font-size: 12px; 
-  font-family: Arial;
+  font-family: Roboto, sans-serif;
+  font-size: 12pt;
+  font-weight: normal;
+  font-stretch: normal;
+  font-style: normal;
+  letter-spacing: normal;
 }
 
 header {

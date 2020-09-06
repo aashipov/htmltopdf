@@ -6,7 +6,7 @@ rm -rf ${TMP_DIR}
 mkdir -p ${TMP_DIR}
 
 URL_BASE="http://localhost:8080"
-REQUEST_PARAMS="--form files=@index.html --form files=@style.css --form files=@logo.png --form files=dimension.png"
+REQUEST_PARAMS="--form files=@index.html --form files=@style.css --form files=@logo.png --form files=dimension.png --form files=@Roboto-Bold.ttf --form files=@Roboto-Regular.ttf"
 
 do_post() {
   FILENAME_PREFIX=$(shuf -i 0-100000 -n 1)
