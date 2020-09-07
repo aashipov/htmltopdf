@@ -44,6 +44,10 @@ Install ```curl```, ```bash```, [patched ```wkhtmltopdf```](https://wkhtmltopdf.
 
 Modern C
 
+#### Why Centos ####
+
+Out of the box Chromium Headless, reasonable image size
+
 #### License ####
 
 Perl The "Artistic License"
