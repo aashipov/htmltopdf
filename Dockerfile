@@ -4,7 +4,7 @@ ARG WKHTMLTOX_RPM=wkhtmltox-$WKHTMLTOX_VERSION.centos7.x86_64.rpm
 ADD https://github.com/wkhtmltopdf/packaging/releases/download/$WKHTMLTOX_VERSION/$WKHTMLTOX_RPM /tmp/
 # An unprivileged user without sudo, no need in chromium sandboxing or seccomp
 RUN groupadd dummy ; useradd -d /dummy/ -m -g dummy dummy ; \
-yum install -y epel-release ; yum update -y ; \
+yum install -y epel-release ; \
 # we only need chromium-headless, but there are missing files only available in chromium package https://github.com/elastic/kibana/issues/28408
 yum install -y chromium-headless fontconfig /tmp/$WKHTMLTOX_RPM ; rm -rf /tmp/$WKHTMLTOX_RPM ; \
 yum clean all ; ln -s /usr/lib64/chromium-browser/headless_shell /usr/bin/chromium
