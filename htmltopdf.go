@@ -170,18 +170,18 @@ func callExecutable(executableName string, workdir string) error {
 }
 
 func commonHandler(w http.ResponseWriter, r *http.Request) {
-	workdir := createWorkDir()
+	workdir := ""
 	defer os.RemoveAll(workdir)
 	// Store multipart
 	switch r.URL.String() {
 	case htmlUrl, chromiumUrl:
+		workdir = createWorkDir()
 		if err := receiveFiles(w, r, workdir); isError(err) {
 			log.Print(err)
 			buildInternalServerError(w, err)
 			return
 		}
 	}
-	currentPdfFile := filepath.Join(workdir, resultPdf)
 	// HTML to PDF or respond health
 	switch r.URL.String() {
 	case htmlUrl:
@@ -200,7 +200,7 @@ func commonHandler(w http.ResponseWriter, r *http.Request) {
 		health(w, r)
 		return
 	}
-	if err := sendPdf(w, currentPdfFile); isError(err) {
+	if err := sendPdf(w, filepath.Join(workdir, resultPdf)); isError(err) {
 		buildInternalServerError(w, err)
 	}
 }
@@ -220,5 +220,7 @@ func main() {
 	http.HandleFunc(slash, commonHandler)
 	server := http.Server{Addr: ":8080", Handler: nil}
 	enableGracefulShutdown(&server)
-	server.ListenAndServe()
+	if err := server.ListenAndServe(); isError(err) {
+		log.Fatal(err)
+	}
 }
