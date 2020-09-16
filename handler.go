@@ -5,46 +5,49 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const (
-	slash       = "/"
-	htmlUrl     = slash + html
-	chromiumUrl = slash + chromium
+	slash            = "/"
+	htmlUrl          = slash + html
+	htmlLandscapeUrl = slash + html + slash + landscape
+	chromiumUrl      = slash + chromium
 )
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	workdir := ""
-	defer os.RemoveAll(workdir)
-	// Store multipart
-	switch r.URL.String() {
+	url := r.URL.String()
+	switch url {
 	case htmlUrl, chromiumUrl:
-		workdir = createWorkDir()
+		workdir := createWorkDir()
+		defer os.RemoveAll(workdir)
+		opts := newPrinterOptions(workdir)
+		if strings.Contains(url, landscape) {
+			opts.setOrientation(landscape)
+		}
+		if strings.Contains(url, html) {
+			opts.setExecutableName(wkhtmltopdfExecutableName)
+		}
+		if strings.Contains(url, chromium) {
+			opts.setExecutableName(chromiumExecutableName)
+		}
+		// Store multipart
 		if err := receiveFiles(w, r, workdir); isError(err) {
 			log.Print(err)
 			buildInternalServerError(w, err)
 			return
 		}
-	}
-	// HTML to PDF or respond health
-	switch r.URL.String() {
-	case htmlUrl:
-		if err := callExecutable(wkhtmltopdf, workdir); isError(err) {
+		// convert
+		if err := callExecutable(opts); isError(err) {
 			log.Print(err)
 			buildInternalServerError(w, err)
 			return
 		}
-	case chromiumUrl:
-		if err := callExecutable(chromium, workdir); isError(err) {
-			log.Print(err)
+		if err := sendPdf(w, filepath.Join(workdir, resultPdf)); isError(err) {
 			buildInternalServerError(w, err)
-			return
 		}
 	default:
 		health(w, r)
 		return
-	}
-	if err := sendPdf(w, filepath.Join(workdir, resultPdf)); isError(err) {
-		buildInternalServerError(w, err)
 	}
 }

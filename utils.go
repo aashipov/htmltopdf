@@ -31,11 +31,14 @@ const (
 	noIndexHtml   = "No " + indexHtml
 	unsupportedOs = "Unsupported Operating System"
 	osCmdTimeout  = 30 * time.Second
+	portrait      = "portrait"
+	landscape     = "landscape"
 )
 
 var (
 	wkhtmltopdfExecutableName = getWkhtmltopdfExecutableName()
 	chromiumExecutableName    = getChromiumExecutableName()
+	a4                        = paperSize{width: "210", height: "297"}
 )
 
 func getWkhtmltopdfExecutableName() string {
@@ -142,27 +145,31 @@ func health(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("{\"status\":\"UP\"}"))
 }
 
-func buildCmd(executableName string, workdir string, ctx context.Context) (*exec.Cmd, error) {
+func buildCmd(opts *printerOptions, ctx context.Context) (*exec.Cmd, error) {
 	cmd := exec.Cmd{}
-	if chromium == executableName {
-		cmd = *exec.CommandContext(ctx, chromiumExecutableName, "--headless", "--no-sandbox", "--disable-setuid-sandbox", "--no-zygote", "--single-process", "--disable-notifications", "--disable-geolocation", "--disable-infobars", "--disable-session-crashed-bubble", "--unlimited-storage", "--disable-dev-shm-usage", "--disable-gpu", "--disable-translate", "--disable-extensions", "--disable-background-networking", "--safebrowsing-disable-auto-update", "--disable-sync", "--disable-default-apps", "--hide-scrollbars", "--metrics-recording-only", "--mute-audio", "--no-first-run", "--virtual-time-budget=1000", "--print-to-pdf="+filepath.Join(workdir, resultPdf), filepath.Join(workdir, indexHtml))
-	} else if wkhtmltopdf == executableName {
-		cmd = *exec.CommandContext(ctx, wkhtmltopdfExecutableName, "--enable-local-file-access", "--print-media-type", "--no-stop-slow-scripts", "--margin-bottom", "0", "--margin-left", "0", "--margin-right", "0", "--margin-top", "0", filepath.Join(workdir, indexHtml), filepath.Join(workdir, resultPdf))
+	if chromiumExecutableName == opts.executableName {
+		cmd = *exec.CommandContext(ctx, chromiumExecutableName, "--headless", "--no-sandbox", "--disable-setuid-sandbox", "--no-zygote", "--single-process", "--disable-notifications", "--disable-geolocation", "--disable-infobars", "--disable-session-crashed-bubble", "--unlimited-storage", "--disable-dev-shm-usage", "--disable-gpu", "--disable-translate", "--disable-extensions", "--disable-background-networking", "--safebrowsing-disable-auto-update", "--disable-sync", "--disable-default-apps", "--hide-scrollbars", "--metrics-recording-only", "--mute-audio", "--no-first-run", "--virtual-time-budget=1000", "--print-to-pdf="+filepath.Join(opts.workdir, resultPdf), filepath.Join(opts.workdir, indexHtml))
+	} else if wkhtmltopdfExecutableName == opts.executableName {
+		cmd = *exec.CommandContext(ctx, wkhtmltopdfExecutableName,
+			"--enable-local-file-access", "--print-media-type", "--no-stop-slow-scripts",
+			"--margin-bottom", "0", "--margin-left", "0", "--margin-right", "0", "--margin-top", "0",
+			"--page-width", opts.pageWidth, "--page-height", opts.pageHeight, "--orientation", opts.orientation,
+			filepath.Join(opts.workdir, indexHtml), filepath.Join(opts.workdir, resultPdf))
 	} else {
-		return nil, errors.New("Unknown executable " + executableName)
+		return nil, errors.New("Unknown executable " + opts.executableName)
 	}
-	cmd.Dir = workdir
+	cmd.Dir = opts.workdir
 	return &cmd, nil
 }
 
-func callExecutable(executableName string, workdir string) error {
+func callExecutable(opts *printerOptions) error {
 	ctx, cancel := context.WithTimeout(context.Background(), osCmdTimeout)
 	defer cancel()
-	cmd, err := buildCmd(executableName, workdir, ctx)
+	cmd, err := buildCmd(opts, ctx)
 	if isError(err) {
 		return err
 	}
-	log.Printf("executing %s in %s", executableName, workdir)
+	log.Printf("executing %s in %s", opts.executableName, opts.workdir)
 	return cmd.Run()
 }
 
@@ -175,4 +182,42 @@ func enableGracefulShutdown(server *http.Server) {
 		server.Close()
 		os.Exit(0)
 	}()
+}
+
+type paperSize struct {
+	width  string
+	height string
+}
+
+type printerOptions struct {
+	workdir        string // directory to run converter in
+	executableName string // either wkhtmltopdf or chromium executable name
+	orientation    string // either Portrait or Landscape
+	pageWidth      string // paper width, mm
+	pageHeight     string // paper height, mm
+}
+
+func newPrinterOptions(workdir string) *printerOptions {
+	opts := new(printerOptions)
+	opts.workdir = workdir
+	opts.orientation = portrait
+	opts.pageWidth = a4.width
+	opts.pageHeight = a4.height
+	return opts
+}
+
+func (opts *printerOptions) setExecutableName(executableName string) *printerOptions {
+	opts.executableName = executableName
+	return opts
+}
+
+func (opts *printerOptions) setPaperSize(paperSize paperSize) *printerOptions {
+	opts.pageWidth = paperSize.width
+	opts.pageHeight = paperSize.height
+	return opts
+}
+
+func (opts *printerOptions) setOrientation(orientation string) *printerOptions {
+	opts.orientation = orientation
+	return opts
 }
