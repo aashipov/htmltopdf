@@ -29,9 +29,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		if err := sendPdf(w, filepath.Join(workdir, resultPdf)); isError(err) {
 			buildInternalServerError(w, err)
 		}
-		return
 	} else {
 		health(w, r)
-		return
 	}
 }
