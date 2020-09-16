@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"context"
 	"errors"
+	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
@@ -17,29 +19,40 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/mafredri/cdp"
+	"github.com/mafredri/cdp/devtool"
+	"github.com/mafredri/cdp/protocol/page"
+	"github.com/mafredri/cdp/protocol/target"
+	"github.com/mafredri/cdp/rpcc"
 )
 
 const (
-	osName        = runtime.GOOS
-	linux         = "linux"
-	windows       = "windows"
-	tmp           = "tmp"
-	html          = "html"
-	wkhtmltopdf   = "wkhtmltopdf"
-	chromium      = "chromium"
-	indexHtml     = "index." + html
-	resultPdf     = "result.pdf"
-	noIndexHtml   = "No " + indexHtml
-	unsupportedOs = "Unsupported Operating System"
-	osCmdTimeout  = 30 * time.Second
-	portrait      = "portrait"
-	landscape     = "landscape"
-	a3            = "a3"
+	osName                 = runtime.GOOS
+	linux                  = "linux"
+	windows                = "windows"
+	tmp                    = "tmp"
+	html                   = "html"
+	wkhtmltopdf            = "wkhtmltopdf"
+	chromium               = "chromium"
+	indexHtml              = "index." + html
+	resultPdf              = "result.pdf"
+	noIndexHtml            = "No " + indexHtml
+	unsupportedOs          = "Unsupported Operating System"
+	osCmdTimeout           = 30 * time.Second
+	portrait               = "portrait"
+	landscape              = "landscape"
+	a3                     = "a3"
+	maxDevtConnections int = 5
 )
 
 var (
 	wkhtmltopdfExecutableName = getWkhtmltopdfExecutableName()
 	chromiumExecutableName    = getChromiumExecutableName()
+	// nolint: gochecknoglobals
+	lockChrome = make(chan struct{}, 1)
+	// nolint: gochecknoglobals
+	devtConnections int
 	// A4 Paper size A4
 	A4 = paperSize{widthMm: "210", widthIn: "8.5", heightMm: "297", heightIn: "11.71"}
 	// A3 Paper size A3
@@ -150,8 +163,133 @@ func health(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("{\"status\":\"UP\"}"))
 }
 
-func buildCmd(ctx context.Context, opts *printerOptions) (*exec.Cmd, error) {
+//Simplified https://github.com/thecodingmachine/gotenberg/blob/master/internal/pkg/printer/chrome.go
+func viaDevTools(ctx context.Context, opts *printerOptions) error {
+	resolver := func() error {
+		devt, err := devtool.New("http://localhost:9222").Version(ctx)
+		if err != nil {
+			return err
+		}
+		// connect to WebSocket URL (page) that speaks the Chrome DevTools Protocol.
+		devtConn, err := rpcc.DialContext(ctx, devt.WebSocketDebuggerURL)
+		if err != nil {
+			return err
+		}
+		defer devtConn.Close()
+		// create a new CDP Client that uses conn.
+		devtClient := cdp.NewClient(devtConn)
+		createBrowserContextArgs := target.NewCreateBrowserContextArgs()
+		newContextTarget, err := devtClient.Target.CreateBrowserContext(ctx, createBrowserContextArgs)
+		if err != nil {
+			return err
+		}
+		/*
+			close the browser context when done.
+			we're not using the "default" context
+			as it may timeout before actually closing
+			the browser context.
+			see: https://github.com/mafredri/cdp/issues/101#issuecomment-524533670
+		*/
+		disposeBrowserContextArgs := target.NewDisposeBrowserContextArgs(newContextTarget.BrowserContextID)
+		defer devtClient.Target.DisposeBrowserContext(context.Background(), disposeBrowserContextArgs) // nolint: errcheck
+		// create a new blank target with the new browser context.
+		createTargetArgs := target.
+			NewCreateTargetArgs("about:blank").
+			SetBrowserContextID(newContextTarget.BrowserContextID)
+		newTarget, err := devtClient.Target.CreateTarget(ctx, createTargetArgs)
+		if err != nil {
+			return err
+		}
+		// connect the client to the new target.
+		newTargetWsURL := fmt.Sprintf("ws://127.0.0.1:9222/devtools/page/%s", newTarget.TargetID)
+		newContextConn, err := rpcc.DialContext(
+			ctx,
+			newTargetWsURL,
+			/*
+				see:
+				https://github.com/thecodingmachine/gotenberg/issues/108
+				https://github.com/mafredri/cdp/issues/4
+				https://github.com/ChromeDevTools/devtools-protocol/issues/24
+			*/
+			//rpcc.WithWriteBufferSize(int(p.opts.RpccBufferSize)),
+			rpcc.WithCompression(),
+		)
+		if err != nil {
+			return err
+		}
+		defer newContextConn.Close()
+		// create a new CDP Client that uses newContextConn.
+		targetClient := cdp.NewClient(newContextConn)
+		/*
+			close the target when done.
+			we're not using the "default" context
+			as it may timeout before actually closing
+			the target.
+			see: https://github.com/mafredri/cdp/issues/101#issuecomment-524533670
+		*/
+		closeTargetArgs := target.NewCloseTargetArgs(newTarget.TargetID)
+		defer targetClient.Target.CloseTarget(context.Background(), closeTargetArgs) // nolint: errcheck
+
+		printToPdfArgs := page.NewPrintToPDFArgs()
+		f, err := strconv.ParseFloat(opts.paperSize.widthIn, 64)
+		if !isError(err) {
+			printToPdfArgs.SetPaperWidth(f)
+		} else {
+			return err
+		}
+		f, err = strconv.ParseFloat(opts.paperSize.heightIn, 64)
+		if !isError(err) {
+			printToPdfArgs.SetPaperHeight(f)
+		} else {
+			return err
+		}
+		if landscape == opts.orientation {
+			printToPdfArgs.SetLandscape(true)
+		}
+
+		// printToPDF the page to PDF.
+		printToPDF, err := targetClient.Page.PrintToPDF(ctx, printToPdfArgs)
+		if isError(err) {
+			return err
+		}
+		if err := ioutil.WriteFile(filepath.Join(opts.workdir, resultPdf), printToPDF.Data, os.ModePerm); isError(err) {
+			return err
+		}
+		return nil
+	}
+	if devtConnections < maxDevtConnections {
+		devtConnections++
+		err := resolver()
+		devtConnections--
+		if isError(err) {
+			return err
+		}
+		return nil
+	}
+	select {
+	case lockChrome <- struct{}{}:
+		// lock acquired.
+		devtConnections++
+		err := resolver()
+		devtConnections--
+		<-lockChrome // we release the lock.
+		if isError(err) {
+			return err
+		}
+		return nil
+	case <-ctx.Done():
+		// failed to acquire lock before
+		// deadline.
+		return errors.New("timed out")
+	}
+}
+
+func (opts *printerOptions) print() error {
+	ctx, cancel := context.WithTimeout(context.Background(), osCmdTimeout)
+	defer cancel()
 	cmd := exec.Cmd{}
+	log.Printf("executing %s in %s", opts.executableName, opts.workdir)
+	//cmd.Dir = opts.workdir
 	if chromiumExecutableName == opts.executableName {
 		cmd = *exec.CommandContext(ctx, chromiumExecutableName,
 			"--headless", "--no-sandbox", "--disable-setuid-sandbox", "--no-zygote", "--single-process",
@@ -160,28 +298,17 @@ func buildCmd(ctx context.Context, opts *printerOptions) (*exec.Cmd, error) {
 			"--disable-background-networking", "--safebrowsing-disable-auto-update", "--disable-sync", "--disable-default-apps",
 			"--hide-scrollbars", "--metrics-recording-only", "--mute-audio", "--no-first-run", "--virtual-time-budget=1000",
 			"--print-to-pdf="+filepath.Join(opts.workdir, resultPdf), filepath.Join(opts.workdir, indexHtml))
+		return cmd.Run()
 	} else if wkhtmltopdfExecutableName == opts.executableName {
 		cmd = *exec.CommandContext(ctx, wkhtmltopdfExecutableName,
 			"--enable-local-file-access", "--print-media-type", "--no-stop-slow-scripts",
 			"--margin-bottom", "0", "--margin-left", "0", "--margin-right", "0", "--margin-top", "0",
 			"--page-width", opts.paperSize.widthMm, "--page-height", opts.paperSize.heightMm, "--orientation", opts.orientation,
 			filepath.Join(opts.workdir, indexHtml), filepath.Join(opts.workdir, resultPdf))
+		return cmd.Run()
 	} else {
-		return nil, errors.New("Unknown executable " + opts.executableName)
+		return errors.New("Unknown executable " + opts.executableName)
 	}
-	cmd.Dir = opts.workdir
-	return &cmd, nil
-}
-
-func callExecutable(opts *printerOptions) error {
-	ctx, cancel := context.WithTimeout(context.Background(), osCmdTimeout)
-	defer cancel()
-	cmd, err := buildCmd(ctx, opts)
-	if isError(err) {
-		return err
-	}
-	log.Printf("executing %s in %s", opts.executableName, opts.workdir)
-	return cmd.Run()
 }
 
 func enableGracefulShutdown(server *http.Server) {

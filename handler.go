@@ -30,7 +30,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		// convert
-		if err := callExecutable(opts); isError(err) {
+		if err := opts.print(); isError(err) {
 			log.Print(err)
 			buildInternalServerError(w, err)
 			return
