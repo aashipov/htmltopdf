@@ -12,6 +12,7 @@ do_post() {
   FILENAME_PREFIX=$(shuf -i 0-100000 -n 1)
   curl --request POST --url ${URL_BASE}/chromium --header "Content-Type: multipart/form-data" ${REQUEST_PARAMS} -o ${TMP_DIR}/${FILENAME_PREFIX}-chromium.pdf
   curl --request POST --url ${URL_BASE}/html --header 'Content-Type: multipart/form-data' ${REQUEST_PARAMS} -o ${TMP_DIR}/${FILENAME_PREFIX}-html.pdf
+  curl --request POST --url ${URL_BASE}/html/landscape --header 'Content-Type: multipart/form-data' ${REQUEST_PARAMS} -o ${TMP_DIR}/${FILENAME_PREFIX}-html-landscape.pdf
   curl ${URL_BASE}/health -o ${TMP_DIR}/${FILENAME_PREFIX}-health.txt
   echo "done ${1}"
 }

@@ -18,7 +18,7 @@ const (
 func handler(w http.ResponseWriter, r *http.Request) {
 	url := r.URL.String()
 	switch url {
-	case htmlUrl, chromiumUrl:
+	case htmlUrl, htmlLandscapeUrl, chromiumUrl:
 		workdir := createWorkDir()
 		defer os.RemoveAll(workdir)
 		opts := newPrinterOptions(workdir)
