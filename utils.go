@@ -382,6 +382,7 @@ func (opts *printerOptions) viaDevTools(ctx context.Context) error {
 		if isError(err) {
 			return err
 		}
+		return nil
 	}
 	select {
 	case lockChrome <- struct{}{}:
@@ -393,12 +394,12 @@ func (opts *printerOptions) viaDevTools(ctx context.Context) error {
 		if isError(err) {
 			return err
 		}
+		return nil
 	case <-ctx.Done():
 		// failed to acquire lock before
 		// deadline.
 		return errors.New("timed out")
 	}
-	return nil
 }
 
 func (opts *printerOptions) print() error {
