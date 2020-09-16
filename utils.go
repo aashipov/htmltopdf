@@ -280,9 +280,10 @@ func (opts *printerOptions) buildCdpPrintToPDFArgs() (*page.PrintToPDFArgs, erro
 		return nil, err
 	}
 	if landscape == opts.orientation {
-		log.Print("landscape chromium")
 		printToPdfArgs.SetLandscape(true)
 	}
+	// easier to set those in CSS
+	printToPdfArgs.SetMarginLeft(0).SetMarginRight(0).SetMarginTop(0).SetMarginBottom(0)
 	return printToPdfArgs, nil
 }
 
