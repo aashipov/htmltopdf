@@ -40,8 +40,10 @@ const (
 var (
 	wkhtmltopdfExecutableName = getWkhtmltopdfExecutableName()
 	chromiumExecutableName    = getChromiumExecutableName()
-	A4                        = paperSize{widthMm: "210", widthIn: "8.5", heightMm: "297", heightIn: "11.71"}
-	A3                        = paperSize{widthMm: "297", widthIn: "11.71", heightMm: "420", heightIn: "16.54"}
+	// A4 Paper size A4
+	A4 = paperSize{widthMm: "210", widthIn: "8.5", heightMm: "297", heightIn: "11.71"}
+	// A3 Paper size A3
+	A3 = paperSize{widthMm: "297", widthIn: "11.71", heightMm: "420", heightIn: "16.54"}
 )
 
 func getWkhtmltopdfExecutableName() string {
@@ -148,10 +150,16 @@ func health(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("{\"status\":\"UP\"}"))
 }
 
-func buildCmd(opts *printerOptions, ctx context.Context) (*exec.Cmd, error) {
+func buildCmd(ctx context.Context, opts *printerOptions) (*exec.Cmd, error) {
 	cmd := exec.Cmd{}
 	if chromiumExecutableName == opts.executableName {
-		cmd = *exec.CommandContext(ctx, chromiumExecutableName, "--headless", "--no-sandbox", "--disable-setuid-sandbox", "--no-zygote", "--single-process", "--disable-notifications", "--disable-geolocation", "--disable-infobars", "--disable-session-crashed-bubble", "--unlimited-storage", "--disable-dev-shm-usage", "--disable-gpu", "--disable-translate", "--disable-extensions", "--disable-background-networking", "--safebrowsing-disable-auto-update", "--disable-sync", "--disable-default-apps", "--hide-scrollbars", "--metrics-recording-only", "--mute-audio", "--no-first-run", "--virtual-time-budget=1000", "--print-to-pdf="+filepath.Join(opts.workdir, resultPdf), filepath.Join(opts.workdir, indexHtml))
+		cmd = *exec.CommandContext(ctx, chromiumExecutableName,
+			"--headless", "--no-sandbox", "--disable-setuid-sandbox", "--no-zygote", "--single-process",
+			"--disable-notifications", "--disable-geolocation", "--disable-infobars", "--disable-session-crashed-bubble",
+			"--unlimited-storage", "--disable-dev-shm-usage", "--disable-gpu", "--disable-translate", "--disable-extensions",
+			"--disable-background-networking", "--safebrowsing-disable-auto-update", "--disable-sync", "--disable-default-apps",
+			"--hide-scrollbars", "--metrics-recording-only", "--mute-audio", "--no-first-run", "--virtual-time-budget=1000",
+			"--print-to-pdf="+filepath.Join(opts.workdir, resultPdf), filepath.Join(opts.workdir, indexHtml))
 	} else if wkhtmltopdfExecutableName == opts.executableName {
 		cmd = *exec.CommandContext(ctx, wkhtmltopdfExecutableName,
 			"--enable-local-file-access", "--print-media-type", "--no-stop-slow-scripts",
@@ -168,7 +176,7 @@ func buildCmd(opts *printerOptions, ctx context.Context) (*exec.Cmd, error) {
 func callExecutable(opts *printerOptions) error {
 	ctx, cancel := context.WithTimeout(context.Background(), osCmdTimeout)
 	defer cancel()
-	cmd, err := buildCmd(opts, ctx)
+	cmd, err := buildCmd(ctx, opts)
 	if isError(err) {
 		return err
 	}
@@ -197,14 +205,13 @@ type paperSize struct {
 type printerOptions struct {
 	workdir        string // directory to run converter in
 	executableName string // either wkhtmltopdf or chromium executable name
-	orientation    string // either Portrait or Landscape
+	orientation    string // either portrait or landscape
 	paperSize      *paperSize
 }
 
 func buildPrinterOpions(workdir string, url string) *printerOptions {
 	opts := new(printerOptions)
 	opts.workdir = workdir
-	opts.paperSize = &A4
 	if strings.Contains(url, landscape) {
 		opts.orientation = landscape
 	} else {
@@ -218,6 +225,8 @@ func buildPrinterOpions(workdir string, url string) *printerOptions {
 	}
 	if strings.Contains(url, a3) {
 		opts.paperSize = &A3
+	} else {
+		opts.paperSize = &A4
 	}
 	return opts
 }
