@@ -58,9 +58,9 @@ var (
 	// nolint: gochecknoglobals
 	devtConnections int
 	// A4 Paper size A4
-	A4 = paperSize{widthMm: "210", widthIn: "8.5", heightMm: "297", heightIn: "11.71"}
+	A4 = paperSize{widthMm: "210", widthIn: 8.5, heightMm: "297", heightIn: 11.71}
 	// A3 Paper size A3
-	A3 = paperSize{widthMm: "297", widthIn: "11.71", heightMm: "420", heightIn: "16.54"}
+	A3 = paperSize{widthMm: "297", widthIn: 11.71, heightMm: "420", heightIn: 16.54}
 )
 
 func getWkhtmltopdfExecutableName() string {
@@ -267,18 +267,8 @@ func (opts *printerOptions) listenEventsAndNavigate(ctx context.Context, client 
 
 func (opts *printerOptions) buildCdpPrintToPDFArgs() (*page.PrintToPDFArgs, error) {
 	printToPdfArgs := page.NewPrintToPDFArgs()
-	f, err := strconv.ParseFloat(opts.paperSize.widthIn, 64)
-	if !isError(err) {
-		printToPdfArgs.SetPaperWidth(f)
-	} else {
-		return nil, err
-	}
-	f, err = strconv.ParseFloat(opts.paperSize.heightIn, 64)
-	if !isError(err) {
-		printToPdfArgs.SetPaperHeight(f)
-	} else {
-		return nil, err
-	}
+	printToPdfArgs.SetPaperWidth(opts.paperSize.widthIn)
+	printToPdfArgs.SetPaperHeight(opts.paperSize.heightIn)
 	if landscape == opts.orientation {
 		printToPdfArgs.SetLandscape(true)
 	}
@@ -409,14 +399,6 @@ func (opts *printerOptions) print() error {
 	log.Printf("executing %s in %s", opts.executableName, opts.workdir)
 	//cmd.Dir = opts.workdir
 	if chromiumExecutableName == opts.executableName {
-		/*cmd = *exec.CommandContext(ctx, chromiumExecutableName,
-			"--headless", "--no-sandbox", "--disable-setuid-sandbox", "--no-zygote", "--single-process",
-			"--disable-notifications", "--disable-geolocation", "--disable-infobars", "--disable-session-crashed-bubble",
-			"--unlimited-storage", "--disable-dev-shm-usage", "--disable-gpu", "--disable-translate", "--disable-extensions",
-			"--disable-background-networking", "--safebrowsing-disable-auto-update", "--disable-sync", "--disable-default-apps",
-			"--hide-scrollbars", "--metrics-recording-only", "--mute-audio", "--no-first-run", "--virtual-time-budget=1000",
-			"--print-to-pdf="+filepath.Join(opts.workdir, resultPdf), filepath.Join(opts.workdir, indexHtml))
-		return cmd.Run()*/
 		return opts.viaDevTools(ctx)
 	} else if wkhtmltopdfExecutableName == opts.executableName {
 		cmd = *exec.CommandContext(ctx, wkhtmltopdfExecutableName,
@@ -441,11 +423,14 @@ func enableGracefulShutdown(server *http.Server) {
 	}()
 }
 
+// Office paper size
+// mm for wkhtml
+// in for chromium
 type paperSize struct {
-	widthMm  string // millimeters
-	widthIn  string // inches
+	widthMm  string  // millimeters
+	widthIn  float64 // inches
 	heightMm string
-	heightIn string
+	heightIn float64
 }
 
 type printerOptions struct {
