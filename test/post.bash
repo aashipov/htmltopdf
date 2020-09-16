@@ -11,6 +11,7 @@ REQUEST_PARAMS="--form files=@index.html --form files=@style.css --form files=@l
 do_post() {
   FILENAME_PREFIX=$(shuf -i 0-100000 -n 1)
   curl --request POST --url ${URL_BASE}/chromium --header "Content-Type: multipart/form-data" ${REQUEST_PARAMS} -o ${TMP_DIR}/${FILENAME_PREFIX}-chromium.pdf
+  curl --request POST --url ${URL_BASE}/chromium/landscape --header "Content-Type: multipart/form-data" ${REQUEST_PARAMS} -o ${TMP_DIR}/${FILENAME_PREFIX}-chromium-landscape.pdf
   curl --request POST --url ${URL_BASE}/html --header 'Content-Type: multipart/form-data' ${REQUEST_PARAMS} -o ${TMP_DIR}/${FILENAME_PREFIX}-html.pdf
   curl --request POST --url ${URL_BASE}/html/landscape --header 'Content-Type: multipart/form-data' ${REQUEST_PARAMS} -o ${TMP_DIR}/${FILENAME_PREFIX}-html-landscape.pdf
   curl --request POST --url ${URL_BASE}/html/a3 --header 'Content-Type: multipart/form-data' ${REQUEST_PARAMS} -o ${TMP_DIR}/${FILENAME_PREFIX}-html-a3.pdf

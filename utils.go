@@ -264,6 +264,27 @@ func (opts *printerOptions) listenEventsAndNavigate(ctx context.Context, client 
 	return resolver()
 }
 
+func (opts *printerOptions) buildCdpPrintToPDFArgs() (*page.PrintToPDFArgs, error) {
+	printToPdfArgs := page.NewPrintToPDFArgs()
+	f, err := strconv.ParseFloat(opts.paperSize.widthIn, 64)
+	if !isError(err) {
+		printToPdfArgs.SetPaperWidth(f)
+	} else {
+		return nil, err
+	}
+	f, err = strconv.ParseFloat(opts.paperSize.heightIn, 64)
+	if !isError(err) {
+		printToPdfArgs.SetPaperHeight(f)
+	} else {
+		return nil, err
+	}
+	if landscape == opts.orientation {
+		log.Print("landscape chromium")
+		printToPdfArgs.SetLandscape(true)
+	}
+	return printToPdfArgs, nil
+}
+
 //Simplified https://github.com/thecodingmachine/gotenberg/blob/master/internal/pkg/printer/chrome.go
 func (opts *printerOptions) viaDevTools(ctx context.Context) error {
 	resolver := func() error {
@@ -338,23 +359,10 @@ func (opts *printerOptions) viaDevTools(ctx context.Context) error {
 			return err
 		}
 
-		printToPdfArgs := page.NewPrintToPDFArgs()
-		f, err := strconv.ParseFloat(opts.paperSize.widthIn, 64)
-		if !isError(err) {
-			printToPdfArgs.SetPaperWidth(f)
-		} else {
+		printToPdfArgs, err := opts.buildCdpPrintToPDFArgs()
+		if isError(err) {
 			return err
 		}
-		f, err = strconv.ParseFloat(opts.paperSize.heightIn, 64)
-		if !isError(err) {
-			printToPdfArgs.SetPaperHeight(f)
-		} else {
-			return err
-		}
-		if landscape == opts.orientation {
-			printToPdfArgs.SetLandscape(true)
-		}
-
 		// printToPDF the page to PDF.
 		printToPDF, err := targetClient.Page.PrintToPDF(ctx, printToPdfArgs)
 		if isError(err) {

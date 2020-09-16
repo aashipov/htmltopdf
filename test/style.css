@@ -1,9 +1,12 @@
 /* A4 & PDF heather / footer removal */
 @media print {
+  /*
+  Needed for chromium --headless ... -print-to-pdf=
+  Wrong paper size & orientation in DevTools Protocol
   @page {
       margin: 0mm 0mm 0mm 0mm;
       size: A4;
-  }
+  }*/
 }
 
 @font-face {
