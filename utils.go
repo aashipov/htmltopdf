@@ -22,28 +22,31 @@ import (
 
 	"github.com/mafredri/cdp"
 	"github.com/mafredri/cdp/devtool"
+	"github.com/mafredri/cdp/protocol/network"
 	"github.com/mafredri/cdp/protocol/page"
 	"github.com/mafredri/cdp/protocol/target"
 	"github.com/mafredri/cdp/rpcc"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
-	osName                 = runtime.GOOS
-	linux                  = "linux"
-	windows                = "windows"
-	tmp                    = "tmp"
-	html                   = "html"
-	wkhtmltopdf            = "wkhtmltopdf"
-	chromium               = "chromium"
-	indexHtml              = "index." + html
-	resultPdf              = "result.pdf"
-	noIndexHtml            = "No " + indexHtml
-	unsupportedOs          = "Unsupported Operating System"
-	osCmdTimeout           = 30 * time.Second
-	portrait               = "portrait"
-	landscape              = "landscape"
-	a3                     = "a3"
-	maxDevtConnections int = 5
+	osName                      = runtime.GOOS
+	linux                       = "linux"
+	windows                     = "windows"
+	tmp                         = "tmp"
+	html                        = "html"
+	wkhtmltopdf                 = "wkhtmltopdf"
+	chromium                    = "chromium"
+	indexHtml                   = "index." + html
+	resultPdf                   = "result.pdf"
+	noIndexHtml                 = "No " + indexHtml
+	unsupportedOs               = "Unsupported Operating System"
+	osCmdTimeout                = 30 * time.Second
+	portrait                    = "portrait"
+	landscape                   = "landscape"
+	a3                          = "a3"
+	maxDevtConnections   int    = 5
+	networkIdleEventName string = "networkIdle"
 )
 
 var (
@@ -163,16 +166,114 @@ func health(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("{\"status\":\"UP\"}"))
 }
 
+//Copy-paste https://github.com/thecodingmachine/gotenberg/blob/master/internal/pkg/printer/chrome.go
+func runBatch(fn ...func() error) error {
+	// run all functions simultaneously and wait until
+	// execution has completed or an error is encountered.
+	eg := errgroup.Group{}
+	for _, f := range fn {
+		eg.Go(f)
+	}
+	return eg.Wait()
+}
+
 //Simplified https://github.com/thecodingmachine/gotenberg/blob/master/internal/pkg/printer/chrome.go
-func viaDevTools(ctx context.Context, opts *printerOptions) error {
+func enableEvents(ctx context.Context, client *cdp.Client) error {
+	// enable all the domain events that we're interested in.
+	return runBatch(
+		func() error { return client.DOM.Enable(ctx) },
+		func() error { return client.Network.Enable(ctx, network.NewEnableArgs()) },
+		func() error { return client.Page.Enable(ctx) },
+		func() error {
+			return client.Page.SetLifecycleEventsEnabled(ctx, page.NewSetLifecycleEventsEnabledArgs(true))
+		},
+		func() error { return client.Runtime.Enable(ctx) },
+	)
+}
+
+//Simplified https://github.com/thecodingmachine/gotenberg/blob/master/internal/pkg/printer/chrome.go
+func (opts *printerOptions) listenEventsAndNavigate(ctx context.Context, client *cdp.Client) error {
+	resolver := func() error {
+		// make sure Page events are enabled.
+		if err := client.Page.Enable(ctx); isError(err) {
+			return err
+		}
+		// make sure Network events are enabled.
+		if err := client.Network.Enable(ctx, nil); isError(err) {
+			return err
+		}
+		// create all clients for events.
+		domContentEventFired, err := client.Page.DOMContentEventFired(ctx)
+		if isError(err) {
+			return err
+		}
+		defer domContentEventFired.Close()
+		loadEventFired, err := client.Page.LoadEventFired(ctx)
+		if isError(err) {
+			return err
+		}
+		defer loadEventFired.Close()
+		lifecycleEvent, err := client.Page.LifecycleEvent(ctx)
+		if isError(err) {
+			return err
+		}
+		defer lifecycleEvent.Close()
+		loadingFinished, err := client.Network.LoadingFinished(ctx)
+		if isError(err) {
+			return err
+		}
+		defer loadingFinished.Close()
+		// Navigate
+		if _, err := client.Page.Navigate(ctx, page.NewNavigateArgs("file://"+filepath.Join(opts.workdir, indexHtml))); isError(err) {
+			return err
+		}
+		// wait for all events.
+		return runBatch(
+			func() error {
+				if _, err := domContentEventFired.Recv(); isError(err) {
+					return err
+				}
+				return nil
+			},
+			func() error {
+				if _, err := loadEventFired.Recv(); isError(err) {
+					return err
+				}
+				return nil
+			},
+			func() error {
+				for {
+					ev, err := lifecycleEvent.Recv()
+					if isError(err) {
+						return err
+					}
+					if ev.Name == networkIdleEventName {
+						break
+					}
+				}
+				return nil
+			},
+			func() error {
+				if _, err := loadingFinished.Recv(); isError(err) {
+					return err
+				}
+				return nil
+			},
+		)
+	}
+	return resolver()
+}
+
+//Simplified https://github.com/thecodingmachine/gotenberg/blob/master/internal/pkg/printer/chrome.go
+func (opts *printerOptions) viaDevTools(ctx context.Context) error {
 	resolver := func() error {
 		devt, err := devtool.New("http://localhost:9222").Version(ctx)
-		if err != nil {
+		if isError(err) {
 			return err
 		}
 		// connect to WebSocket URL (page) that speaks the Chrome DevTools Protocol.
 		devtConn, err := rpcc.DialContext(ctx, devt.WebSocketDebuggerURL)
-		if err != nil {
+		if isError(err) {
 			return err
 		}
 		defer devtConn.Close()
@@ -180,7 +281,7 @@ func viaDevTools(ctx context.Context, opts *printerOptions) error {
 		devtClient := cdp.NewClient(devtConn)
 		createBrowserContextArgs := target.NewCreateBrowserContextArgs()
 		newContextTarget, err := devtClient.Target.CreateBrowserContext(ctx, createBrowserContextArgs)
-		if err != nil {
+		if isError(err) {
 			return err
 		}
 		/*
@@ -197,7 +298,7 @@ func viaDevTools(ctx context.Context, opts *printerOptions) error {
 			NewCreateTargetArgs("about:blank").
 			SetBrowserContextID(newContextTarget.BrowserContextID)
 		newTarget, err := devtClient.Target.CreateTarget(ctx, createTargetArgs)
-		if err != nil {
+		if isError(err) {
 			return err
 		}
 		// connect the client to the new target.
@@ -214,7 +315,7 @@ func viaDevTools(ctx context.Context, opts *printerOptions) error {
 			//rpcc.WithWriteBufferSize(int(p.opts.RpccBufferSize)),
 			rpcc.WithCompression(),
 		)
-		if err != nil {
+		if isError(err) {
 			return err
 		}
 		defer newContextConn.Close()
@@ -229,6 +330,13 @@ func viaDevTools(ctx context.Context, opts *printerOptions) error {
 		*/
 		closeTargetArgs := target.NewCloseTargetArgs(newTarget.TargetID)
 		defer targetClient.Target.CloseTarget(context.Background(), closeTargetArgs) // nolint: errcheck
+		if err := enableEvents(ctx, targetClient); isError(err) {
+			return err
+		}
+		// listen for all events.
+		if err := opts.listenEventsAndNavigate(ctx, targetClient); isError(err) {
+			return err
+		}
 
 		printToPdfArgs := page.NewPrintToPDFArgs()
 		f, err := strconv.ParseFloat(opts.paperSize.widthIn, 64)
@@ -291,14 +399,15 @@ func (opts *printerOptions) print() error {
 	log.Printf("executing %s in %s", opts.executableName, opts.workdir)
 	//cmd.Dir = opts.workdir
 	if chromiumExecutableName == opts.executableName {
-		cmd = *exec.CommandContext(ctx, chromiumExecutableName,
+		/*cmd = *exec.CommandContext(ctx, chromiumExecutableName,
 			"--headless", "--no-sandbox", "--disable-setuid-sandbox", "--no-zygote", "--single-process",
 			"--disable-notifications", "--disable-geolocation", "--disable-infobars", "--disable-session-crashed-bubble",
 			"--unlimited-storage", "--disable-dev-shm-usage", "--disable-gpu", "--disable-translate", "--disable-extensions",
 			"--disable-background-networking", "--safebrowsing-disable-auto-update", "--disable-sync", "--disable-default-apps",
 			"--hide-scrollbars", "--metrics-recording-only", "--mute-audio", "--no-first-run", "--virtual-time-budget=1000",
 			"--print-to-pdf="+filepath.Join(opts.workdir, resultPdf), filepath.Join(opts.workdir, indexHtml))
-		return cmd.Run()
+		return cmd.Run()*/
+		return opts.viaDevTools(ctx)
 	} else if wkhtmltopdfExecutableName == opts.executableName {
 		cmd = *exec.CommandContext(ctx, wkhtmltopdfExecutableName,
 			"--enable-local-file-access", "--print-media-type", "--no-stop-slow-scripts",
