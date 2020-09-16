@@ -5,32 +5,24 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 const (
-	slash            = "/"
-	htmlUrl          = slash + html
-	htmlLandscapeUrl = slash + html + slash + landscape
-	chromiumUrl      = slash + chromium
+	slash              = "/"
+	htmlUrl            = slash + html
+	htmlLandscapeUrl   = slash + html + slash + landscape
+	htmlA3Url          = slash + html + slash + a3
+	htmlA3LandscapeUrl = slash + html + slash + a3 + slash + landscape
+	chromiumUrl        = slash + chromium
 )
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	url := r.URL.String()
 	switch url {
-	case htmlUrl, htmlLandscapeUrl, chromiumUrl:
+	case htmlUrl, htmlLandscapeUrl, htmlA3Url, htmlA3LandscapeUrl, chromiumUrl:
 		workdir := createWorkDir()
 		defer os.RemoveAll(workdir)
-		opts := newPrinterOptions(workdir)
-		if strings.Contains(url, landscape) {
-			opts.setOrientation(landscape)
-		}
-		if strings.Contains(url, html) {
-			opts.setExecutableName(wkhtmltopdfExecutableName)
-		}
-		if strings.Contains(url, chromium) {
-			opts.setExecutableName(chromiumExecutableName)
-		}
+		opts := buildPrinterOpions(workdir, url)
 		// Store multipart
 		if err := receiveFiles(w, r, workdir); isError(err) {
 			log.Print(err)

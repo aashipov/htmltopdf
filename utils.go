@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -33,12 +34,14 @@ const (
 	osCmdTimeout  = 30 * time.Second
 	portrait      = "portrait"
 	landscape     = "landscape"
+	a3            = "a3"
 )
 
 var (
 	wkhtmltopdfExecutableName = getWkhtmltopdfExecutableName()
 	chromiumExecutableName    = getChromiumExecutableName()
-	a4                        = paperSize{width: "210", height: "297"}
+	A4                        = paperSize{width: "210", height: "297"}
+	A3                        = paperSize{width: "297", height: "420"}
 )
 
 func getWkhtmltopdfExecutableName() string {
@@ -201,23 +204,25 @@ func newPrinterOptions(workdir string) *printerOptions {
 	opts := new(printerOptions)
 	opts.workdir = workdir
 	opts.orientation = portrait
-	opts.pageWidth = a4.width
-	opts.pageHeight = a4.height
+	opts.pageWidth = A4.width
+	opts.pageHeight = A4.height
 	return opts
 }
 
-func (opts *printerOptions) setExecutableName(executableName string) *printerOptions {
-	opts.executableName = executableName
-	return opts
-}
-
-func (opts *printerOptions) setPaperSize(paperSize paperSize) *printerOptions {
-	opts.pageWidth = paperSize.width
-	opts.pageHeight = paperSize.height
-	return opts
-}
-
-func (opts *printerOptions) setOrientation(orientation string) *printerOptions {
-	opts.orientation = orientation
+func buildPrinterOpions(workdir string, url string) *printerOptions {
+	opts := newPrinterOptions(workdir)
+	if strings.Contains(url, landscape) {
+		opts.orientation = landscape
+	}
+	if strings.Contains(url, html) {
+		opts.executableName = wkhtmltopdfExecutableName
+	}
+	if strings.Contains(url, chromium) {
+		opts.executableName = chromiumExecutableName
+	}
+	if strings.Contains(url, a3) {
+		opts.pageHeight = A3.height
+		opts.pageWidth = A3.width
+	}
 	return opts
 }
