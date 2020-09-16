@@ -4,11 +4,11 @@ Receive a static HTML-page named ```index.html``` (and optional CSS, graphics, f
 
 #### Prior art ####
 
-```https://www.chromium.org```
-
 ```https://github.com/wkhtmltopdf/wkhtmltopdf```
 
 ```https://github.com/mafredri/cdp```
+
+```https://www.chromium.org```
 
 ```https://github.com/thecodingmachine/gotenberg```
 
