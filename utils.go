@@ -40,8 +40,8 @@ const (
 var (
 	wkhtmltopdfExecutableName = getWkhtmltopdfExecutableName()
 	chromiumExecutableName    = getChromiumExecutableName()
-	A4                        = paperSize{width: "210", height: "297"}
-	A3                        = paperSize{width: "297", height: "420"}
+	A4                        = paperSize{widthMm: "210", widthIn: "8.5", heightMm: "297", heightIn: "11.71"}
+	A3                        = paperSize{widthMm: "297", widthIn: "11.71", heightMm: "420", heightIn: "16.54"}
 )
 
 func getWkhtmltopdfExecutableName() string {
@@ -156,7 +156,7 @@ func buildCmd(opts *printerOptions, ctx context.Context) (*exec.Cmd, error) {
 		cmd = *exec.CommandContext(ctx, wkhtmltopdfExecutableName,
 			"--enable-local-file-access", "--print-media-type", "--no-stop-slow-scripts",
 			"--margin-bottom", "0", "--margin-left", "0", "--margin-right", "0", "--margin-top", "0",
-			"--page-width", opts.pageWidth, "--page-height", opts.pageHeight, "--orientation", opts.orientation,
+			"--page-width", opts.paperSize.widthMm, "--page-height", opts.paperSize.heightMm, "--orientation", opts.orientation,
 			filepath.Join(opts.workdir, indexHtml), filepath.Join(opts.workdir, resultPdf))
 	} else {
 		return nil, errors.New("Unknown executable " + opts.executableName)
@@ -188,23 +188,23 @@ func enableGracefulShutdown(server *http.Server) {
 }
 
 type paperSize struct {
-	width  string
-	height string
+	widthMm  string // millimeters
+	widthIn  string // inches
+	heightMm string
+	heightIn string
 }
 
 type printerOptions struct {
 	workdir        string // directory to run converter in
 	executableName string // either wkhtmltopdf or chromium executable name
 	orientation    string // either Portrait or Landscape
-	pageWidth      string // paper width, mm
-	pageHeight     string // paper height, mm
+	paperSize      *paperSize
 }
 
 func buildPrinterOpions(workdir string, url string) *printerOptions {
 	opts := new(printerOptions)
 	opts.workdir = workdir
-	opts.pageWidth = A4.width
-	opts.pageHeight = A4.height
+	opts.paperSize = &A4
 	if strings.Contains(url, landscape) {
 		opts.orientation = landscape
 	} else {
@@ -217,8 +217,7 @@ func buildPrinterOpions(workdir string, url string) *printerOptions {
 		opts.executableName = chromiumExecutableName
 	}
 	if strings.Contains(url, a3) {
-		opts.pageHeight = A3.height
-		opts.pageWidth = A3.width
+		opts.paperSize = &A3
 	}
 	return opts
 }
