@@ -200,19 +200,15 @@ type printerOptions struct {
 	pageHeight     string // paper height, mm
 }
 
-func newPrinterOptions(workdir string) *printerOptions {
+func buildPrinterOpions(workdir string, url string) *printerOptions {
 	opts := new(printerOptions)
 	opts.workdir = workdir
-	opts.orientation = portrait
 	opts.pageWidth = A4.width
 	opts.pageHeight = A4.height
-	return opts
-}
-
-func buildPrinterOpions(workdir string, url string) *printerOptions {
-	opts := newPrinterOptions(workdir)
 	if strings.Contains(url, landscape) {
 		opts.orientation = landscape
+	} else {
+		opts.orientation = portrait
 	}
 	if strings.Contains(url, html) {
 		opts.executableName = wkhtmltopdfExecutableName
