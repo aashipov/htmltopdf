@@ -8,6 +8,8 @@ Receive a static HTML-page named ```index.html``` (and optional CSS, graphics, f
 
 ```https://github.com/wkhtmltopdf/wkhtmltopdf```
 
+```https://github.com/mafredri/cdp```
+
 ```https://github.com/thecodingmachine/gotenberg```
 
 #### How-to ####
