@@ -5,22 +5,12 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-)
-
-const (
-	slash                = "/"
-	htmlUrl              = slash + html
-	htmlLandscapeUrl     = slash + html + slash + landscape
-	htmlA3Url            = slash + html + slash + a3
-	htmlA3LandscapeUrl   = slash + html + slash + a3 + slash + landscape
-	chromiumUrl          = slash + chromium
-	chromiumLandscapeUrl = slash + chromium + slash + landscape
+	"strings"
 )
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	url := r.URL.String()
-	switch url {
-	case htmlUrl, htmlLandscapeUrl, htmlA3Url, htmlA3LandscapeUrl, chromiumUrl, chromiumLandscapeUrl:
+	if strings.Contains(url, html) || strings.Contains(url, chromium) {
 		workdir := createWorkDir()
 		defer os.RemoveAll(workdir)
 		opts := buildPrinterOpions(workdir, url)
@@ -39,7 +29,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		if err := sendPdf(w, filepath.Join(workdir, resultPdf)); isError(err) {
 			buildInternalServerError(w, err)
 		}
-	default:
+		return
+	} else {
 		health(w, r)
 		return
 	}

@@ -30,23 +30,24 @@ import (
 )
 
 const (
-	osName                      = runtime.GOOS
-	linux                       = "linux"
-	windows                     = "windows"
-	tmp                         = "tmp"
-	html                        = "html"
-	wkhtmltopdf                 = "wkhtmltopdf"
-	chromium                    = "chromium"
-	indexHtml                   = "index." + html
-	resultPdf                   = "result.pdf"
-	noIndexHtml                 = "No " + indexHtml
-	unsupportedOs               = "Unsupported Operating System"
-	osCmdTimeout                = 30 * time.Second
-	portrait                    = "portrait"
-	landscape                   = "landscape"
-	a3                          = "a3"
-	maxDevtConnections   int    = 5
-	networkIdleEventName string = "networkIdle"
+	osName               = runtime.GOOS
+	linux                = "linux"
+	windows              = "windows"
+	tmp                  = "tmp"
+	slash                = "/"
+	html                 = "html"
+	wkhtmltopdf          = "wkhtmltopdf"
+	chromium             = "chromium"
+	indexHtml            = "index." + html
+	resultPdf            = "result.pdf"
+	noIndexHtml          = "No " + indexHtml
+	unsupportedOs        = "Unsupported Operating System"
+	osCmdTimeout         = 30 * time.Second
+	portrait             = "portrait"
+	landscape            = "landscape"
+	a3                   = "a3"
+	maxDevtConnections   = 5
+	networkIdleEventName = "networkIdle"
 )
 
 var (

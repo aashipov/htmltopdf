@@ -22,6 +22,10 @@ HTTP Endpoints:
 
 ```/chromium``` converts via chromium (slower)
 
+Paper size
+
+```/chromium/a3/landscape``` prints on landscape oriented A3 canvas
+
 ##### Docker #####
 
 The preferred way - from Docker Hub ```docker run -d --rm --name=htmltopdf -p 8080:8080  aashipov/htmltopdf:latest```
