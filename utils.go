@@ -433,6 +433,7 @@ type paperSize struct {
 	heightIn float64
 }
 
+// Converter task definition
 type printerOptions struct {
 	workdir        string // directory to run converter in
 	executableName string // either wkhtmltopdf or chromium executable name
