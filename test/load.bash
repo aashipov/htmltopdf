@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # JMeter load test.
-# Copy `load` directory and `load.bash` to JMeter `bin` and run `bash load.bash` there
-# On MS Windows copy `html` directory to JMere `bin/load/`
+# Copy `load` directory and `load.bash` to JMeter `bin`, copy `html` directory to JMeter `bin/load/` 
+# Run `bash load.bash` in JMeter `bin` directory
 
 rm -rf load/Load-test.jtl
 rm -rf load/web-report/
