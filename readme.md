@@ -1,6 +1,6 @@
 ### HTML to PDF ###
 
-Receive a static HTML-page named ```index.html``` (and optional CSS, graphics, fonts etc) and produce PDF page(s) via ```wkhtmltopdf``` or ```chromium --headless ... --print-to-pdf=...```
+Receive a static HTML-page named ```index.html``` (and optional CSS, graphics, fonts etc) and produce PDF page(s) via ```wkhtmltopdf``` or ```chromium```
 
 #### Prior art ####
 
@@ -24,7 +24,7 @@ HTTP Endpoints:
 
 ```/chromium``` converts via chromium (slower)
 
-Paper size
+Paper size & orientation
 
 ```/chromium/a3/landscape``` prints on landscape oriented A3 canvas
 
@@ -38,7 +38,7 @@ Local build & run ```bash build-and-run.bash```
 
 ##### On-premise #####
 
-Install ```curl```, ```bash```, [patched ```wkhtmltopdf```](https://wkhtmltopdf.org/downloads.html), ```chromium / chrome.exe```, add to ```PATH```, Go compiler toolchain
+Install ```curl```, ```bash```, [patched ```wkhtmltopdf```](https://wkhtmltopdf.org/downloads.html), ```chromium / chrome.exe```, Go compiler toolchain, add to ```PATH```
 
 ```go build && ./htmltopdf```
 
@@ -46,13 +46,17 @@ Install ```curl```, ```bash```, [patched ```wkhtmltopdf```](https://wkhtmltopdf.
 
 ```cd temp && bash post.bash```
 
+##### Performance #####
+
+If higher throughput and conversion via ```chromium``` are a must, consider multiple containers (see ```test/farm/farm-refresh.bash```), otherwise use ```wkhtmltopdf```
+
 #### Why Go? ####
 
 Modern C
 
 #### Why Centos ####
 
-Out of the box Chromium Headless, reasonable image size
+Out of the box Chromium Headless
 
 #### License ####
 

@@ -1,12 +1,13 @@
 #!/bin/bash
 
 WORKDIR=$(pwd)
-TMP_DIR=${WORKDIR}/tmp
+TMP_DIR=/${WORKDIR}/tmp
+HTML_DIR=/${WORKDIR}/html
 rm -rf ${TMP_DIR}
 mkdir -p ${TMP_DIR}
 
 URL_BASE="http://localhost:8080"
-REQUEST_PARAMS="--form files=@index.html --form files=@style.css --form files=@logo.png --form files=dimension.png --form files=@Roboto-Bold.ttf --form files=@Roboto-Regular.ttf"
+REQUEST_PARAMS="--form files=@${HTML_DIR}/index.html --form files=@${HTML_DIR}/style.css --form files=@${HTML_DIR}/logo.png --form files=${HTML_DIR}/dimension.png --form files=@${HTML_DIR}/Roboto-Bold.ttf --form files=@${HTML_DIR}/Roboto-Regular.ttf"
 
 do_post() {
   FILENAME_PREFIX=$(shuf -i 0-100000 -n 1)
