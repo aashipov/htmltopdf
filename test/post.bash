@@ -1,8 +1,8 @@
 #!/bin/bash
 
 WORKDIR=$(pwd)
-TMP_DIR=/${WORKDIR}/tmp
-HTML_DIR=/${WORKDIR}/html
+TMP_DIR=${WORKDIR}/tmp
+HTML_DIR=${WORKDIR}/html
 rm -rf ${TMP_DIR}
 mkdir -p ${TMP_DIR}
 
