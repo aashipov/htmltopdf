@@ -10,6 +10,7 @@ import (
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	url := r.URL.String()
+	// convert HTML to PDF
 	if strings.Contains(url, html) || strings.Contains(url, chromium) {
 		workdir := createWorkDir()
 		defer os.RemoveAll(workdir)
@@ -29,7 +30,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		if err := sendPdf(w, filepath.Join(workdir, resultPdf)); isError(err) {
 			buildInternalServerError(w, err)
 		}
-	} else {
-		health(w, r)
+		return
 	}
+	// otherwise respond {"status":"UP"}
+	health(w, r)
 }
