@@ -451,8 +451,7 @@ func buildPrinterOpions(workdir string, url string) *printerOptions {
 	}
 	if strings.Contains(url, html) {
 		opts.executableName = wkhtmltopdfExecutableName
-	}
-	if strings.Contains(url, chromium) {
+	} else if strings.Contains(url, chromium) {
 		opts.executableName = chromiumExecutableName
 	}
 	if strings.Contains(url, a3) {
