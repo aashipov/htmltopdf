@@ -57,7 +57,3 @@ Modern C
 #### Why Centos ####
 
 Out of the box Chromium Headless
-
-#### License ####
-
-Perl The "Artistic License"
