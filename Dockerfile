@@ -24,6 +24,7 @@ USER dummy
 RUN go build
 
 FROM base AS final
+USER root
 EXPOSE 8080
 COPY --from=builder /usr/lib64/chromium-browser/swiftshader/ /usr/lib64/chromium-browser/swiftshader/
 COPY --from=builder --chown=dummy:dummy /dummy/htmltopdf /dummy/
