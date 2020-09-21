@@ -52,7 +52,6 @@ const (
 
 var (
 	wkhtmltopdfExecutableName = getWkhtmltopdfExecutableName()
-	chromiumExecutableName    = getChromiumExecutableName()
 	// nolint: gochecknoglobals
 	lockChrome = make(chan struct{}, 1)
 	// nolint: gochecknoglobals
@@ -69,16 +68,6 @@ func getWkhtmltopdfExecutableName() string {
 	}
 	if windows == osName {
 		return "wkhtmltopdf.exe"
-	}
-	return unsupportedOs
-}
-
-func getChromiumExecutableName() string {
-	if linux == osName {
-		return chromium
-	}
-	if windows == osName {
-		return "chrome.exe"
 	}
 	return unsupportedOs
 }
@@ -365,7 +354,7 @@ func (opts *printerOptions) viaDevTools(ctx context.Context) error {
 		}
 		return nil
 	}
-	if devtConnections < maxDevtConnections {
+	/*if devtConnections < maxDevtConnections {
 		devtConnections++
 		err := resolver()
 		devtConnections--
@@ -373,7 +362,7 @@ func (opts *printerOptions) viaDevTools(ctx context.Context) error {
 			return err
 		}
 		return nil
-	}
+	}*/
 	select {
 	case lockChrome <- struct{}{}:
 		// lock acquired.
@@ -393,15 +382,13 @@ func (opts *printerOptions) viaDevTools(ctx context.Context) error {
 }
 
 func (opts *printerOptions) print() error {
+	log.Printf("executing %s in %s", opts.executableName, opts.workdir)
 	ctx, cancel := context.WithTimeout(context.Background(), osCmdTimeout)
 	defer cancel()
-	cmd := exec.Cmd{}
-	log.Printf("executing %s in %s", opts.executableName, opts.workdir)
-	//cmd.Dir = opts.workdir
-	if chromiumExecutableName == opts.executableName {
+	if chromium == opts.executableName {
 		return opts.viaDevTools(ctx)
 	} else if wkhtmltopdfExecutableName == opts.executableName {
-		cmd = *exec.CommandContext(ctx, wkhtmltopdfExecutableName,
+		cmd := *exec.CommandContext(ctx, wkhtmltopdfExecutableName,
 			"--enable-local-file-access", "--print-media-type", "--no-stop-slow-scripts",
 			"--margin-bottom", "0", "--margin-left", "0", "--margin-right", "0", "--margin-top", "0",
 			"--page-width", opts.paperSize.widthMm, "--page-height", opts.paperSize.heightMm, "--orientation", opts.orientation,
@@ -452,7 +439,7 @@ func buildPrinterOpions(workdir string, url string) *printerOptions {
 	if strings.Contains(url, html) {
 		opts.executableName = wkhtmltopdfExecutableName
 	} else if strings.Contains(url, chromium) {
-		opts.executableName = chromiumExecutableName
+		opts.executableName = chromium
 	}
 	if strings.Contains(url, a3) {
 		opts.paperSize = &A3
