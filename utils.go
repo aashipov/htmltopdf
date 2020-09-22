@@ -55,7 +55,7 @@ var (
 	// nolint: gochecknoglobals
 	lockChrome = make(chan struct{}, 1)
 	// nolint: gochecknoglobals
-	devtConnections int
+	devtConnections = 0
 	// A4 Paper size A4
 	A4 = paperSize{widthMm: "210", widthIn: 8.5, heightMm: "297", heightIn: 11.71}
 	// A3 Paper size A3
@@ -354,7 +354,7 @@ func (opts *printerOptions) viaDevTools(ctx context.Context) error {
 		}
 		return nil
 	}
-	/*if devtConnections < maxDevtConnections {
+	if devtConnections < maxDevtConnections {
 		devtConnections++
 		err := resolver()
 		devtConnections--
@@ -362,7 +362,7 @@ func (opts *printerOptions) viaDevTools(ctx context.Context) error {
 			return err
 		}
 		return nil
-	}*/
+	}
 	select {
 	case lockChrome <- struct{}{}:
 		// lock acquired.
