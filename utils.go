@@ -46,7 +46,7 @@ const (
 	portrait             = "portrait"
 	landscape            = "landscape"
 	a3                   = "a3"
-	maxDevtConnections   = 100
+	maxDevtConnections   = 10
 	networkIdleEventName = "networkIdle"
 )
 
