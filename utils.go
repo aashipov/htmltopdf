@@ -46,7 +46,7 @@ const (
 	portrait             = "portrait"
 	landscape            = "landscape"
 	a3                   = "a3"
-	maxDevtConnections   = 10
+	maxDevtConnections   = 100
 	networkIdleEventName = "networkIdle"
 )
 
@@ -146,8 +146,8 @@ func sendPdf(w http.ResponseWriter, currentPdfFile string) error {
 	if _, err := io.Copy(w, br); isError(err) {
 		return err
 	}
-	w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(resultPdf))
-	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Disposition", "attachment;filename=\"result.pdf\"")
+	w.Header().Set("Content-Type", "application/pdf")
 	return file.Close()
 }
 
@@ -168,7 +168,7 @@ func runBatch(fn ...func() error) error {
 }
 
 //Simplified https://github.com/thecodingmachine/gotenberg/blob/master/internal/pkg/printer/chrome.go
-func enableEvents(ctx context.Context, client *cdp.Client) error {
+func cdpEnableEvents(ctx context.Context, client *cdp.Client) error {
 	// enable all the domain events that we're interested in.
 	return runBatch(
 		func() error { return client.DOM.Enable(ctx) },
@@ -182,79 +182,76 @@ func enableEvents(ctx context.Context, client *cdp.Client) error {
 }
 
 //Simplified https://github.com/thecodingmachine/gotenberg/blob/master/internal/pkg/printer/chrome.go
-func (opts *printerOptions) listenEventsAndNavigate(ctx context.Context, client *cdp.Client) error {
-	resolver := func() error {
-		// make sure Page events are enabled.
-		if err := client.Page.Enable(ctx); isError(err) {
-			return err
-		}
-		// make sure Network events are enabled.
-		if err := client.Network.Enable(ctx, nil); isError(err) {
-			return err
-		}
-		// create all clients for events.
-		domContentEventFired, err := client.Page.DOMContentEventFired(ctx)
-		if isError(err) {
-			return err
-		}
-		defer domContentEventFired.Close()
-		loadEventFired, err := client.Page.LoadEventFired(ctx)
-		if isError(err) {
-			return err
-		}
-		defer loadEventFired.Close()
-		lifecycleEvent, err := client.Page.LifecycleEvent(ctx)
-		if isError(err) {
-			return err
-		}
-		defer lifecycleEvent.Close()
-		loadingFinished, err := client.Network.LoadingFinished(ctx)
-		if isError(err) {
-			return err
-		}
-		defer loadingFinished.Close()
-		// Navigate
-		if _, err := client.Page.Navigate(ctx, page.NewNavigateArgs("file://"+filepath.Join(opts.workdir, indexHtml))); isError(err) {
-			return err
-		}
-		// wait for all events.
-		return runBatch(
-			func() error {
-				if _, err := domContentEventFired.Recv(); isError(err) {
-					return err
-				}
-				return nil
-			},
-			func() error {
-				if _, err := loadEventFired.Recv(); isError(err) {
-					return err
-				}
-				return nil
-			},
-			func() error {
-				for {
-					ev, err := lifecycleEvent.Recv()
-					if isError(err) {
-						return err
-					}
-					if ev.Name == networkIdleEventName {
-						break
-					}
-				}
-				return nil
-			},
-			func() error {
-				if _, err := loadingFinished.Recv(); isError(err) {
-					return err
-				}
-				return nil
-			},
-		)
+func (opts *printerOptions) cdpListenEventsAndNavigate(ctx context.Context, client *cdp.Client) error {
+	// make sure Page events are enabled.
+	if err := client.Page.Enable(ctx); isError(err) {
+		return err
 	}
-	return resolver()
+	// make sure Network events are enabled.
+	if err := client.Network.Enable(ctx, nil); isError(err) {
+		return err
+	}
+	// create all clients for events.
+	domContentEventFired, err := client.Page.DOMContentEventFired(ctx)
+	if isError(err) {
+		return err
+	}
+	defer domContentEventFired.Close()
+	loadEventFired, err := client.Page.LoadEventFired(ctx)
+	if isError(err) {
+		return err
+	}
+	defer loadEventFired.Close()
+	lifecycleEvent, err := client.Page.LifecycleEvent(ctx)
+	if isError(err) {
+		return err
+	}
+	defer lifecycleEvent.Close()
+	loadingFinished, err := client.Network.LoadingFinished(ctx)
+	if isError(err) {
+		return err
+	}
+	defer loadingFinished.Close()
+	// Navigate
+	if _, err := client.Page.Navigate(ctx, page.NewNavigateArgs("file://"+filepath.Join(opts.workdir, indexHtml))); isError(err) {
+		return err
+	}
+	// wait for all events.
+	return runBatch(
+		func() error {
+			if _, err := domContentEventFired.Recv(); isError(err) {
+				return err
+			}
+			return nil
+		},
+		func() error {
+			if _, err := loadEventFired.Recv(); isError(err) {
+				return err
+			}
+			return nil
+		},
+		func() error {
+			for {
+				ev, err := lifecycleEvent.Recv()
+				if isError(err) {
+					return err
+				}
+				if ev.Name == networkIdleEventName {
+					break
+				}
+			}
+			return nil
+		},
+		func() error {
+			if _, err := loadingFinished.Recv(); isError(err) {
+				return err
+			}
+			return nil
+		},
+	)
 }
 
-func (opts *printerOptions) buildCdpPrintToPDFArgs() (*page.PrintToPDFArgs, error) {
+func (opts *printerOptions) cdpPrintToPDFArgs() (*page.PrintToPDFArgs, error) {
 	printToPdfArgs := page.NewPrintToPDFArgs()
 	printToPdfArgs.SetPaperWidth(opts.paperSize.widthIn)
 	printToPdfArgs.SetPaperHeight(opts.paperSize.heightIn)
@@ -267,96 +264,98 @@ func (opts *printerOptions) buildCdpPrintToPDFArgs() (*page.PrintToPDFArgs, erro
 }
 
 //Simplified https://github.com/thecodingmachine/gotenberg/blob/master/internal/pkg/printer/chrome.go
-func (opts *printerOptions) viaDevTools(ctx context.Context) error {
-	resolver := func() error {
-		devt, err := devtool.New("http://localhost:9222").Version(ctx)
-		if isError(err) {
-			return err
-		}
-		// connect to WebSocket URL (page) that speaks the Chrome DevTools Protocol.
-		devtConn, err := rpcc.DialContext(ctx, devt.WebSocketDebuggerURL)
-		if isError(err) {
-			return err
-		}
-		defer devtConn.Close()
-		// create a new CDP Client that uses conn.
-		devtClient := cdp.NewClient(devtConn)
-		createBrowserContextArgs := target.NewCreateBrowserContextArgs()
-		newContextTarget, err := devtClient.Target.CreateBrowserContext(ctx, createBrowserContextArgs)
-		if isError(err) {
-			return err
-		}
-		/*
-			close the browser context when done.
-			we're not using the "default" context
-			as it may timeout before actually closing
-			the browser context.
-			see: https://github.com/mafredri/cdp/issues/101#issuecomment-524533670
-		*/
-		disposeBrowserContextArgs := target.NewDisposeBrowserContextArgs(newContextTarget.BrowserContextID)
-		defer devtClient.Target.DisposeBrowserContext(context.Background(), disposeBrowserContextArgs) // nolint: errcheck
-		// create a new blank target with the new browser context.
-		createTargetArgs := target.
-			NewCreateTargetArgs("about:blank").
-			SetBrowserContextID(newContextTarget.BrowserContextID)
-		newTarget, err := devtClient.Target.CreateTarget(ctx, createTargetArgs)
-		if isError(err) {
-			return err
-		}
-		// connect the client to the new target.
-		newTargetWsURL := fmt.Sprintf("ws://127.0.0.1:9222/devtools/page/%s", newTarget.TargetID)
-		newContextConn, err := rpcc.DialContext(
-			ctx,
-			newTargetWsURL,
-			/*
-				see:
-				https://github.com/thecodingmachine/gotenberg/issues/108
-				https://github.com/mafredri/cdp/issues/4
-				https://github.com/ChromeDevTools/devtools-protocol/issues/24
-			*/
-			//rpcc.WithWriteBufferSize(int(p.opts.RpccBufferSize)),
-			rpcc.WithCompression(),
-		)
-		if isError(err) {
-			return err
-		}
-		defer newContextConn.Close()
-		// create a new CDP Client that uses newContextConn.
-		targetClient := cdp.NewClient(newContextConn)
-		/*
-			close the target when done.
-			we're not using the "default" context
-			as it may timeout before actually closing
-			the target.
-			see: https://github.com/mafredri/cdp/issues/101#issuecomment-524533670
-		*/
-		closeTargetArgs := target.NewCloseTargetArgs(newTarget.TargetID)
-		defer targetClient.Target.CloseTarget(context.Background(), closeTargetArgs) // nolint: errcheck
-		if err := enableEvents(ctx, targetClient); isError(err) {
-			return err
-		}
-		// listen for all events.
-		if err := opts.listenEventsAndNavigate(ctx, targetClient); isError(err) {
-			return err
-		}
-
-		printToPdfArgs, err := opts.buildCdpPrintToPDFArgs()
-		if isError(err) {
-			return err
-		}
-		// printToPDF the page to PDF.
-		printToPDF, err := targetClient.Page.PrintToPDF(ctx, printToPdfArgs)
-		if isError(err) {
-			return err
-		}
-		if err := ioutil.WriteFile(filepath.Join(opts.workdir, resultPdf), printToPDF.Data, os.ModePerm); isError(err) {
-			return err
-		}
-		return nil
+func (opts *printerOptions) viaCdpInner(ctx context.Context) error {
+	devt, err := devtool.New("http://localhost:9222").Version(ctx)
+	if isError(err) {
+		return err
 	}
+	// connect to WebSocket URL (page) that speaks the Chrome DevTools Protocol.
+	devtConn, err := rpcc.DialContext(ctx, devt.WebSocketDebuggerURL)
+	if isError(err) {
+		return err
+	}
+	defer devtConn.Close()
+	// create a new CDP Client that uses conn.
+	devtClient := cdp.NewClient(devtConn)
+	createBrowserContextArgs := target.NewCreateBrowserContextArgs()
+	newContextTarget, err := devtClient.Target.CreateBrowserContext(ctx, createBrowserContextArgs)
+	if isError(err) {
+		return err
+	}
+	/*
+		close the browser context when done.
+		we're not using the "default" context
+		as it may timeout before actually closing
+		the browser context.
+		see: https://github.com/mafredri/cdp/issues/101#issuecomment-524533670
+	*/
+	disposeBrowserContextArgs := target.NewDisposeBrowserContextArgs(newContextTarget.BrowserContextID)
+	defer devtClient.Target.DisposeBrowserContext(context.Background(), disposeBrowserContextArgs) // nolint: errcheck
+	// create a new blank target with the new browser context.
+	createTargetArgs := target.
+		NewCreateTargetArgs("about:blank").
+		SetBrowserContextID(newContextTarget.BrowserContextID)
+	newTarget, err := devtClient.Target.CreateTarget(ctx, createTargetArgs)
+	if isError(err) {
+		return err
+	}
+	// connect the client to the new target.
+	newTargetWsURL := fmt.Sprintf("ws://127.0.0.1:9222/devtools/page/%s", newTarget.TargetID)
+	newContextConn, err := rpcc.DialContext(
+		ctx,
+		newTargetWsURL,
+		/*
+			see:
+			https://github.com/thecodingmachine/gotenberg/issues/108
+			https://github.com/mafredri/cdp/issues/4
+			https://github.com/ChromeDevTools/devtools-protocol/issues/24
+		*/
+		//rpcc.WithWriteBufferSize(int(p.opts.RpccBufferSize)),
+		rpcc.WithCompression(),
+	)
+	if isError(err) {
+		return err
+	}
+	defer newContextConn.Close()
+	// create a new CDP Client that uses newContextConn.
+	targetClient := cdp.NewClient(newContextConn)
+	/*
+		close the target when done.
+		we're not using the "default" context
+		as it may timeout before actually closing
+		the target.
+		see: https://github.com/mafredri/cdp/issues/101#issuecomment-524533670
+	*/
+	closeTargetArgs := target.NewCloseTargetArgs(newTarget.TargetID)
+	defer targetClient.Target.CloseTarget(context.Background(), closeTargetArgs) // nolint: errcheck
+	if err := cdpEnableEvents(ctx, targetClient); isError(err) {
+		return err
+	}
+	// listen for all events.
+	if err := opts.cdpListenEventsAndNavigate(ctx, targetClient); isError(err) {
+		return err
+	}
+
+	printToPdfArgs, err := opts.cdpPrintToPDFArgs()
+	if isError(err) {
+		return err
+	}
+	// printToPDF the page to PDF.
+	printToPDF, err := targetClient.Page.PrintToPDF(ctx, printToPdfArgs)
+	if isError(err) {
+		return err
+	}
+	if err := ioutil.WriteFile(filepath.Join(opts.workdir, resultPdf), printToPDF.Data, os.ModePerm); isError(err) {
+		return err
+	}
+	return nil
+}
+
+//Simplified https://github.com/thecodingmachine/gotenberg/blob/master/internal/pkg/printer/chrome.go
+func (opts *printerOptions) viaCdp(ctx context.Context) error {
 	if devtConnections < maxDevtConnections {
 		devtConnections++
-		err := resolver()
+		err := runBatch(func() error { return opts.viaCdpInner(ctx) })
 		devtConnections--
 		if isError(err) {
 			return err
@@ -367,7 +366,7 @@ func (opts *printerOptions) viaDevTools(ctx context.Context) error {
 	case lockChrome <- struct{}{}:
 		// lock acquired.
 		devtConnections++
-		err := resolver()
+		err := runBatch(func() error { return opts.viaCdpInner(ctx) })
 		devtConnections--
 		<-lockChrome // we release the lock.
 		if isError(err) {
@@ -386,7 +385,7 @@ func (opts *printerOptions) print() error {
 	ctx, cancel := context.WithTimeout(context.Background(), osCmdTimeout)
 	defer cancel()
 	if chromium == opts.executableName {
-		return opts.viaDevTools(ctx)
+		return opts.viaCdp(ctx)
 	} else if wkhtmltopdfExecutableName == opts.executableName {
 		cmd := *exec.CommandContext(ctx, wkhtmltopdfExecutableName,
 			"--enable-local-file-access", "--print-media-type", "--no-stop-slow-scripts",
