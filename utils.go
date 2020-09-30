@@ -128,7 +128,6 @@ func receiveFiles(w http.ResponseWriter, r *http.Request, workdir string) error 
 		if indexHtml == part.FileName() {
 			indexHtmlReceived = true
 		}
-		//log.Printf("Received : %s\n", fileToSave)
 	}
 	if !indexHtmlReceived {
 		return errors.New(noIndexHtml)
@@ -381,7 +380,6 @@ func (opts *printerOptions) viaCdp(ctx context.Context) error {
 }
 
 func (opts *printerOptions) print() error {
-	log.Printf("executing %s in %s", opts.executableName, opts.workdir)
 	ctx, cancel := context.WithTimeout(context.Background(), osCmdTimeout)
 	defer cancel()
 	if chromium == opts.executableName {
