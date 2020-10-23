@@ -11,12 +11,12 @@ REQUEST_PARAMS="--form files=@${HTML_DIR}/index.html --form files=@${HTML_DIR}/s
 
 do_post() {
   FILENAME_PREFIX=$(shuf -i 0-100000 -n 1)
-  curl --request POST --url ${URL_BASE}/chromium --header "Content-Type: multipart/form-data" ${REQUEST_PARAMS} -o ${TMP_DIR}/${FILENAME_PREFIX}-chromium.pdf
+  curl --request POST --url ${URL_BASE}/chromium/top10/bottom10/right10 --header "Content-Type: multipart/form-data" ${REQUEST_PARAMS} -o ${TMP_DIR}/${FILENAME_PREFIX}-chromium.pdf
   curl --request POST --url ${URL_BASE}/chromium/landscape --header "Content-Type: multipart/form-data" ${REQUEST_PARAMS} -o ${TMP_DIR}/${FILENAME_PREFIX}-chromium-landscape.pdf
   curl --request POST --url ${URL_BASE}/chromium/a3 --header "Content-Type: multipart/form-data" ${REQUEST_PARAMS} -o ${TMP_DIR}/${FILENAME_PREFIX}-chromium-a3.pdf
   curl --request POST --url ${URL_BASE}/chromium/a3/landscape --header "Content-Type: multipart/form-data" ${REQUEST_PARAMS} -o ${TMP_DIR}/${FILENAME_PREFIX}-chromium-a3-landscape.pdf
-  curl --request POST --url ${URL_BASE}/html/left30/right30/top50/bottom50 --header 'Content-Type: multipart/form-data' ${REQUEST_PARAMS} -o ${TMP_DIR}/${FILENAME_PREFIX}-html.pdf
-  curl --request POST --url ${URL_BASE}/html/landscape --header 'Content-Type: multipart/form-data' ${REQUEST_PARAMS} -o ${TMP_DIR}/${FILENAME_PREFIX}-html-landscape.pdf
+  curl --request POST --url ${URL_BASE}/html/left30/right10/top20/bottom20 --header 'Content-Type: multipart/form-data' ${REQUEST_PARAMS} -o ${TMP_DIR}/${FILENAME_PREFIX}-html.pdf
+  curl --request POST --url ${URL_BASE}/html/landscape/left10/right10/top15/bottom5 --header 'Content-Type: multipart/form-data' ${REQUEST_PARAMS} -o ${TMP_DIR}/${FILENAME_PREFIX}-html-landscape.pdf
   curl --request POST --url ${URL_BASE}/html/a3 --header 'Content-Type: multipart/form-data' ${REQUEST_PARAMS} -o ${TMP_DIR}/${FILENAME_PREFIX}-html-a3.pdf
   curl --request POST --url ${URL_BASE}/html/a3/landscape --header 'Content-Type: multipart/form-data' ${REQUEST_PARAMS} -o ${TMP_DIR}/${FILENAME_PREFIX}-html-a3-landscape.pdf
   curl ${URL_BASE}/health -o ${TMP_DIR}/${FILENAME_PREFIX}-health.txt

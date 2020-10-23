@@ -55,6 +55,7 @@ const (
 	bottom               = `bottom`
 	oneOrMoreDigits      = `\d+`
 	defaultMargin        = `20` // all margins, mm
+	mmInInch             = 25.4
 )
 
 var (
@@ -64,9 +65,9 @@ var (
 	// nolint: gochecknoglobals
 	devtConnections = 0
 	// A4 Paper size A4
-	A4 = paperSize{widthMm: "210", widthIn: 8.5, heightMm: "297", heightIn: 11.71}
+	A4 = paperSize{widthMm: "210", heightMm: "297"}
 	// A3 Paper size A3
-	A3                = paperSize{widthMm: "297", widthIn: 11.71, heightMm: "420", heightIn: 16.54}
+	A3                = paperSize{widthMm: "297", heightMm: "420"}
 	marginNames       = []string{left, right, top, bottom}
 	oneOrMoreDigitsRe = regexp.MustCompile(oneOrMoreDigits)
 )
@@ -86,6 +87,13 @@ func isError(err error) bool {
 		return true
 	}
 	return false
+}
+
+func mmToInch(mm string) float64 {
+	if inch, err := strconv.ParseFloat(mm, 64); !isError(err) {
+		return inch / mmInInch
+	}
+	return 0
 }
 
 // Get request workdir
@@ -261,13 +269,15 @@ func (opts *printerOptions) cdpListenEventsAndNavigate(ctx context.Context, clie
 
 func (opts *printerOptions) cdpPrintToPDFArgs() (*page.PrintToPDFArgs, error) {
 	printToPdfArgs := page.NewPrintToPDFArgs()
-	printToPdfArgs.SetPaperWidth(opts.paperSize.widthIn)
-	printToPdfArgs.SetPaperHeight(opts.paperSize.heightIn)
+	printToPdfArgs.SetPaperWidth(mmToInch(opts.paperSize.widthMm))
+	printToPdfArgs.SetPaperHeight(mmToInch(opts.paperSize.heightMm))
 	if landscape == opts.orientation {
 		printToPdfArgs.SetLandscape(true)
 	}
-	// easier to set those in CSS
-	printToPdfArgs.SetMarginLeft(0).SetMarginRight(0).SetMarginTop(0).SetMarginBottom(0)
+	printToPdfArgs.SetMarginLeft(mmToInch(opts.left))
+	printToPdfArgs.SetMarginRight(mmToInch(opts.right))
+	printToPdfArgs.SetMarginTop(mmToInch(opts.top))
+	printToPdfArgs.SetMarginBottom(mmToInch(opts.bottom))
 	return printToPdfArgs, nil
 }
 
@@ -417,13 +427,9 @@ func enableGracefulShutdown(server *http.Server) {
 }
 
 // Office paper size
-// mm for wkhtml
-// in for chromium
 type paperSize struct {
-	widthMm  string  // millimeters
-	widthIn  float64 // inches
+	widthMm  string // millimeters
 	heightMm string
-	heightIn float64
 }
 
 // Converter task definition
