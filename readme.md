@@ -24,9 +24,9 @@ HTTP Endpoints:
 
 ```/chromium``` converts via chromium (slower)
 
-Paper size & orientation
+Paper size & orientation ```/chromium/a3/landscape``` prints on landscape oriented A3 canvas
 
-```/chromium/a3/landscape``` prints on landscape oriented A3 canvas
+Margins ```/html/left30/right30/top50/bottom50```
 
 ##### Docker #####
 

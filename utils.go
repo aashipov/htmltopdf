@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -48,6 +49,12 @@ const (
 	a3                   = "a3"
 	maxDevtConnections   = 10
 	networkIdleEventName = "networkIdle"
+	left                 = `left`
+	right                = `right`
+	top                  = `top`
+	bottom               = `bottom`
+	oneOrMoreDigits      = `\d+`
+	defaultMargin        = `20` // all margins, mm
 )
 
 var (
@@ -59,7 +66,9 @@ var (
 	// A4 Paper size A4
 	A4 = paperSize{widthMm: "210", widthIn: 8.5, heightMm: "297", heightIn: 11.71}
 	// A3 Paper size A3
-	A3 = paperSize{widthMm: "297", widthIn: 11.71, heightMm: "420", heightIn: 16.54}
+	A3                = paperSize{widthMm: "297", widthIn: 11.71, heightMm: "420", heightIn: 16.54}
+	marginNames       = []string{left, right, top, bottom}
+	oneOrMoreDigitsRe = regexp.MustCompile(oneOrMoreDigits)
 )
 
 func getWkhtmltopdfExecutableName() string {
@@ -387,7 +396,7 @@ func (opts *printerOptions) print() error {
 	} else if wkhtmltopdfExecutableName == opts.executableName {
 		cmd := *exec.CommandContext(ctx, wkhtmltopdfExecutableName,
 			"--enable-local-file-access", "--print-media-type", "--no-stop-slow-scripts",
-			"--margin-bottom", "0", "--margin-left", "0", "--margin-right", "0", "--margin-top", "0",
+			"--margin-bottom", opts.bottom, "--margin-left", opts.left, "--margin-right", opts.right, "--margin-top", opts.top,
 			"--page-width", opts.paperSize.widthMm, "--page-height", opts.paperSize.heightMm, "--orientation", opts.orientation,
 			filepath.Join(opts.workdir, indexHtml), filepath.Join(opts.workdir, resultPdf))
 		return cmd.Run()
@@ -423,6 +432,10 @@ type printerOptions struct {
 	executableName string // either wkhtmltopdf or chromium executable name
 	orientation    string // either portrait or landscape
 	paperSize      *paperSize
+	left           string // margins in mm
+	right          string
+	top            string
+	bottom         string
 }
 
 func buildPrinterOpions(workdir string, url string) *printerOptions {
@@ -442,6 +455,31 @@ func buildPrinterOpions(workdir string, url string) *printerOptions {
 		opts.paperSize = &A3
 	} else {
 		opts.paperSize = &A4
+	}
+	// margin initialization
+	for _, marginName := range marginNames {
+		marginNameWithDigitsRe := regexp.MustCompile(marginName + oneOrMoreDigits)
+		marginNameWithDigits := marginNameWithDigitsRe.FindString(url)
+		marginDigits := defaultMargin
+		if len(marginNameWithDigits) > 0 {
+			log.Print(`found margin ` + marginNameWithDigits)
+			marginDigits = oneOrMoreDigitsRe.FindString(marginNameWithDigits)
+
+		}
+		if len(marginDigits) > 0 {
+			if left == marginName {
+				opts.left = marginDigits
+			}
+			if right == marginName {
+				opts.right = marginDigits
+			}
+			if top == marginName {
+				opts.top = marginDigits
+			}
+			if bottom == marginName {
+				opts.bottom = marginDigits
+			}
+		}
 	}
 	return opts
 }

@@ -15,7 +15,7 @@ do_post() {
   curl --request POST --url ${URL_BASE}/chromium/landscape --header "Content-Type: multipart/form-data" ${REQUEST_PARAMS} -o ${TMP_DIR}/${FILENAME_PREFIX}-chromium-landscape.pdf
   curl --request POST --url ${URL_BASE}/chromium/a3 --header "Content-Type: multipart/form-data" ${REQUEST_PARAMS} -o ${TMP_DIR}/${FILENAME_PREFIX}-chromium-a3.pdf
   curl --request POST --url ${URL_BASE}/chromium/a3/landscape --header "Content-Type: multipart/form-data" ${REQUEST_PARAMS} -o ${TMP_DIR}/${FILENAME_PREFIX}-chromium-a3-landscape.pdf
-  curl --request POST --url ${URL_BASE}/html --header 'Content-Type: multipart/form-data' ${REQUEST_PARAMS} -o ${TMP_DIR}/${FILENAME_PREFIX}-html.pdf
+  curl --request POST --url ${URL_BASE}/html/left30/right30/top50/bottom50 --header 'Content-Type: multipart/form-data' ${REQUEST_PARAMS} -o ${TMP_DIR}/${FILENAME_PREFIX}-html.pdf
   curl --request POST --url ${URL_BASE}/html/landscape --header 'Content-Type: multipart/form-data' ${REQUEST_PARAMS} -o ${TMP_DIR}/${FILENAME_PREFIX}-html-landscape.pdf
   curl --request POST --url ${URL_BASE}/html/a3 --header 'Content-Type: multipart/form-data' ${REQUEST_PARAMS} -o ${TMP_DIR}/${FILENAME_PREFIX}-html-a3.pdf
   curl --request POST --url ${URL_BASE}/html/a3/landscape --header 'Content-Type: multipart/form-data' ${REQUEST_PARAMS} -o ${TMP_DIR}/${FILENAME_PREFIX}-html-a3-landscape.pdf
