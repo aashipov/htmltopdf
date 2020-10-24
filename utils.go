@@ -39,9 +39,9 @@ const (
 	html                 = "html"
 	wkhtmltopdf          = "wkhtmltopdf"
 	chromium             = "chromium"
-	indexHtml            = "index." + html
+	indexHTML            = "index." + html
 	resultPdf            = "result.pdf"
-	noIndexHtml          = "No " + indexHtml
+	noIndexHTML          = "No " + indexHTML
 	unsupportedOs        = "Unsupported Operating System"
 	osCmdTimeout         = 30 * time.Second
 	portrait             = "portrait"
@@ -128,7 +128,7 @@ func buildInternalServerError(w http.ResponseWriter, err error) {
 // Store files from Multipart
 // http://sanatgersappa.blogspot.com/2013/03/handling-multiple-file-uploads-in-go.html
 func receiveFiles(w http.ResponseWriter, r *http.Request, workdir string) error {
-	indexHtmlReceived := false
+	indexHTMLReceived := false
 	reader, err := r.MultipartReader()
 	if isError(err) {
 		return err
@@ -152,12 +152,12 @@ func receiveFiles(w http.ResponseWriter, r *http.Request, workdir string) error 
 		if _, err := io.Copy(dst, part); isError(err) {
 			return err
 		}
-		if indexHtml == part.FileName() {
-			indexHtmlReceived = true
+		if indexHTML == part.FileName() {
+			indexHTMLReceived = true
 		}
 	}
-	if !indexHtmlReceived {
-		return errors.New(noIndexHtml)
+	if !indexHTMLReceived {
+		return errors.New(noIndexHTML)
 	}
 	return nil
 }
@@ -239,7 +239,7 @@ func (opts *printerOptions) cdpListenEventsAndNavigate(ctx context.Context, clie
 	}
 	defer loadingFinished.Close()
 	// Navigate
-	if _, err := client.Page.Navigate(ctx, page.NewNavigateArgs("file://"+filepath.Join(opts.workdir, indexHtml))); isError(err) {
+	if _, err := client.Page.Navigate(ctx, page.NewNavigateArgs("file://"+filepath.Join(opts.workdir, indexHTML))); isError(err) {
 		return err
 	}
 	// wait for all events.
@@ -418,7 +418,7 @@ func (opts *printerOptions) print() error {
 			"--enable-local-file-access", "--print-media-type", "--no-stop-slow-scripts",
 			"--margin-bottom", opts.bottom, "--margin-left", opts.left, "--margin-right", opts.right, "--margin-top", opts.top,
 			"--page-width", opts.paperSize.widthMm, "--page-height", opts.paperSize.heightMm, "--orientation", opts.orientation,
-			filepath.Join(opts.workdir, indexHtml), filepath.Join(opts.workdir, resultPdf))
+			filepath.Join(opts.workdir, indexHTML), filepath.Join(opts.workdir, resultPdf))
 		return cmd.Run()
 	} else {
 		return errors.New("Unknown executable " + opts.executableName)
