@@ -68,9 +68,19 @@ var (
 	A4 = paperSize{widthMm: "210", heightMm: "297"}
 	// A3 Paper size A3
 	A3                = paperSize{widthMm: "297", heightMm: "420"}
-	marginNames       = []string{left, right, top, bottom}
 	oneOrMoreDigitsRe = regexp.MustCompile(oneOrMoreDigits)
+	marginNameReMap   = fillMarginNameReMap()
 )
+
+// margin name -> regexp
+func fillMarginNameReMap() map[string]*regexp.Regexp {
+	m := make(map[string]*regexp.Regexp)
+	m[left] = regexp.MustCompile(left + oneOrMoreDigits)
+	m[right] = regexp.MustCompile(right + oneOrMoreDigits)
+	m[top] = regexp.MustCompile(top + oneOrMoreDigits)
+	m[bottom] = regexp.MustCompile(bottom + oneOrMoreDigits)
+	return m
+}
 
 func getWkhtmltopdfExecutableName() string {
 	if linux == osName {
@@ -463,14 +473,11 @@ func buildPrinterOpions(workdir string, url string) *printerOptions {
 		opts.paperSize = &A4
 	}
 	// margin initialization
-	for _, marginName := range marginNames {
-		marginNameWithDigitsRe := regexp.MustCompile(marginName + oneOrMoreDigits)
-		marginNameWithDigits := marginNameWithDigitsRe.FindString(url)
+	for marginName, re := range marginNameReMap {
 		marginDigits := defaultMargin
+		marginNameWithDigits := re.FindString(url)
 		if len(marginNameWithDigits) > 0 {
-			log.Print(`found margin ` + marginNameWithDigits)
 			marginDigits = oneOrMoreDigitsRe.FindString(marginNameWithDigits)
-
 		}
 		if len(marginDigits) > 0 {
 			if left == marginName {
