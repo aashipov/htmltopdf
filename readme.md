@@ -30,7 +30,7 @@ Margins ```/html/left30/right30/top50/bottom50```
 
 ##### Docker #####
 
-The preferred way - from Docker Hub ```docker run -d --rm --name=htmltopdf -p 8080:8080  aashipov/htmltopdf:latest```
+The preferred way - from Docker Hub ```docker pull aashipov/htmltopdf:latest && docker run -d --rm --name=htmltopdf -p 8080:8080 aashipov/htmltopdf:latest```
 
 OR
 
