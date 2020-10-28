@@ -415,7 +415,7 @@ func (opts *printerOptions) print() error {
 		return opts.viaCdp(ctx)
 	} else if wkhtmltopdfExecutableName == opts.executableName {
 		cmd := *exec.CommandContext(ctx, wkhtmltopdfExecutableName,
-			"--enable-local-file-access", "--print-media-type", "--no-stop-slow-scripts",
+			"--enable-local-file-access", "--print-media-type", "--no-stop-slow-scripts", "--disable-smart-shrinking",
 			"--margin-bottom", opts.bottom, "--margin-left", opts.left, "--margin-right", opts.right, "--margin-top", opts.top,
 			"--page-width", opts.paperSize.widthMm, "--page-height", opts.paperSize.heightMm, "--orientation", opts.orientation,
 			filepath.Join(opts.workdir, indexHTML), filepath.Join(opts.workdir, resultPdf))
