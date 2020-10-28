@@ -1,4 +1,4 @@
-FROM centos:7 AS base
+FROM centos:7
 ARG WKHTMLTOX_VERSION=0.12.6-1
 ARG WKHTMLTOX_RPM=wkhtmltox-$WKHTMLTOX_VERSION.centos7.x86_64.rpm
 ADD https://github.com/wkhtmltopdf/packaging/releases/download/$WKHTMLTOX_VERSION/$WKHTMLTOX_RPM /tmp/
