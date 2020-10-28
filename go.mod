@@ -3,6 +3,6 @@ module github.com/aashipov/htmltopdf
 go 1.14
 
 require (
-	github.com/mafredri/cdp v0.29.2
-	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
+	github.com/mafredri/cdp v0.30.0
+	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 )
