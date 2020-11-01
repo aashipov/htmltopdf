@@ -16,5 +16,6 @@
 
 /test/tmp/
 /tmp/
+/vendor/
 /htmltopdf
 /htmltopdf.exe
