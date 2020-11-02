@@ -38,11 +38,9 @@ Local build & run ```bash build-and-run.bash```
 
 ##### On-premise #####
 
-Install ```curl```, ```bash```, [patched ```wkhtmltopdf```](https://wkhtmltopdf.org/downloads.html), ```chromium / chrome.exe```, Go compiler toolchain, add to ```PATH```
+Install ```curl```, ```bash```, [patched ```wkhtmltopdf```](https://wkhtmltopdf.org/downloads.html), ```chromium```, Go compiler toolchain, add to ```PATH```
 
-```go build && ./htmltopdf```
-
-Start Chromium Headless (see ```entrypoint.bash```)
+```go build && bash entrypoint.bash```
 
 ##### Test #####
 
