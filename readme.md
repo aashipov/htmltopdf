@@ -42,6 +42,8 @@ Install ```curl```, ```bash```, [patched ```wkhtmltopdf```](https://wkhtmltopdf.
 
 ```go build && ./htmltopdf```
 
+Start Chromium Headless (see ```entrypoint.bash```)
+
 ##### Test #####
 
 ```cd temp && bash post.bash```
