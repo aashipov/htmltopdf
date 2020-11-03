@@ -174,7 +174,7 @@ func (opts *printerOptions) print() error {
 	ctx, cancel := context.WithTimeout(context.Background(), osCmdTimeout)
 	defer cancel()
 	if chromium == opts.executableName {
-		return opts.viaCdp(ctx)
+		return opts.viaChromedp(ctx)
 	} else if wkhtmltopdfExecutableName == opts.executableName {
 		cmd := *exec.CommandContext(ctx, wkhtmltopdfExecutableName,
 			"--enable-local-file-access", "--print-media-type", "--no-stop-slow-scripts", "--disable-smart-shrinking",
