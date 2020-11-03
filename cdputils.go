@@ -1,4 +1,4 @@
-// Convert via Chromium Headless (CDP)
+// Convert HTML to PDF via Chrome DevTools Protocol (cdp implementation)
 // Simplified copy-paste from https://github.com/thecodingmachine/gotenberg
 package main
 
