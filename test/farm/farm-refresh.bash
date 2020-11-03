@@ -3,7 +3,7 @@
 # Run 3 htmltopdf containers and haproxy
 set -x
 
-HTML_TO_PDF_IMAGE="aashipov/htmltopdf"
+HTML_TO_PDF_IMAGE="aashipov/htmltopdf:chromedp"
 HAPROXY_IMAGE="haproxy:1.7"
 THIS_DIR=$(pwd)
 NODE_1=htmltopdf1
