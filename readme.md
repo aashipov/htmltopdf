@@ -1,4 +1,4 @@
-### HTML to PDF ###
+### HTML to PDF (chromedp) ###
 
 Receive a static HTML-page named ```index.html``` (and optional CSS, graphics, fonts etc) and produce PDF page(s) via ```wkhtmltopdf``` or ```chromium```
 
