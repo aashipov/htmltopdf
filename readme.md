@@ -26,7 +26,7 @@ HTTP Endpoints:
 
 Paper size & orientation ```/chromium/a3/landscape``` prints on landscape oriented A3 canvas
 
-Margins ```/html/left30/right30/top50/bottom50```
+Margins ```/html/top50/right30/bottom50/left30```
 
 ##### Docker #####
 
@@ -38,7 +38,7 @@ Local build & run ```bash build-and-run.bash```
 
 ##### On-premise #####
 
-Install ```curl```, ```bash```, [patched ```wkhtmltopdf```](https://wkhtmltopdf.org/downloads.html), ```chromium```, Go compiler toolchain, add to ```PATH```
+Install ```curl```, ```bash```, [patched ```wkhtmltopdf```](https://wkhtmltopdf.org/downloads.html), [```chromium```](https://www.chromium.org/getting-involved/download-chromium), Go compiler toolchain, add to ```PATH```
 
 ```go build && bash entrypoint.bash```
 
