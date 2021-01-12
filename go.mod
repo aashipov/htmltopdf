@@ -3,6 +3,6 @@ module github.com/aashipov/htmltopdf
 go 1.14
 
 require (
-	github.com/chromedp/cdproto v0.0.0-20201009231348-1c6a710e77de
-	github.com/chromedp/chromedp v0.5.3
+	github.com/chromedp/cdproto v0.0.0-20210104223854-2cc87dae3ee3
+	github.com/chromedp/chromedp v0.6.0
 )
