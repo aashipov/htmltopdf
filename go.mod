@@ -1,6 +1,6 @@
 module github.com/aashipov/htmltopdf
 
-go 1.14
+go 1.15
 
 require (
 	github.com/mafredri/cdp v0.30.0
