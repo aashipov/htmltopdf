@@ -4,7 +4,7 @@
 set -x
 
 HTML_TO_PDF_IMAGE="aashipov/htmltopdf:chromedp"
-HAPROXY_IMAGE="haproxy:1.7"
+HAPROXY_IMAGE="haproxy"
 THIS_DIR=$(pwd)
 NODE_1=htmltopdf1
 NODE_2=htmltopdf2
