@@ -12,6 +12,7 @@ NODE_3=htmltopdf3
 HAPROXY=htmltopdf-haproxy
 NETWORK_NAME=htmltopdf
 VOLUMES_HAPROXY="-v /${THIS_DIR}/haproxy/:/usr/local/etc/haproxy/:ro"
+PORTS_TO_PUBLISH_HAPROXY="-p8080:8080 -p9999:9999"
 
 docker pull ${HTML_TO_PDF_IMAGE}
 docker pull ${HAPROXY_IMAGE}
@@ -21,4 +22,4 @@ docker network create -d bridge ${NETWORK_NAME}
 docker run -d --name=${NODE_1} --hostname=${NODE_1} --net=${NETWORK_NAME} ${HTML_TO_PDF_IMAGE}
 docker run -d --name=${NODE_2} --hostname=${NODE_2} --net=${NETWORK_NAME} ${HTML_TO_PDF_IMAGE}
 docker run -d --name=${NODE_3} --hostname=${NODE_3} --net=${NETWORK_NAME} ${HTML_TO_PDF_IMAGE}
-docker run -d --name=${HAPROXY} --hostname=${HAPROXY} --net=${NETWORK_NAME} ${PORTS_TO_PUBLISH_HAPROXY} -p 8080:8080 ${VOLUMES_HAPROXY} ${HAPROXY_IMAGE}
+docker run -d --name=${HAPROXY} --hostname=${HAPROXY} --net=${NETWORK_NAME} ${PORTS_TO_PUBLISH_HAPROXY} ${VOLUMES_HAPROXY} ${HAPROXY_IMAGE}

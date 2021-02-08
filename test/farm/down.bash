@@ -8,4 +8,6 @@ NODE_3=htmltopdf3
 HAPROXY=htmltopdf-haproxy
 NETWORK_NAME=htmltopdf
 
-docker stop ${HAPROXY} ${NODE_1} ${NODE_2} ${NODE_3} ; docker rm ${HAPROXY} ${NODE_1} ${NODE_2} ${NODE_3} ; docker network rm ${NETWORK_NAME}
+docker stop ${HAPROXY} ${NODE_1} ${NODE_2} ${NODE_3}
+docker rm ${HAPROXY} ${NODE_1} ${NODE_2} ${NODE_3}
+docker network rm ${NETWORK_NAME}
