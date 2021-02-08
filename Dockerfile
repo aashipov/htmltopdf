@@ -15,4 +15,3 @@ COPY --from=builder --chown=dummy:dummy /dummy/entrypoint.bash /dummy/
 WORKDIR /dummy/
 USER dummy
 ENTRYPOINT [ "/dummy/entrypoint.bash" ]
-HEALTHCHECK CMD curl -f http://localhost:8080/health || exit 1
