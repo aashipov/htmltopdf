@@ -34,7 +34,7 @@ const (
 	resultPdf       = "result.pdf"
 	noIndexHTML     = "No " + indexHTML
 	unsupportedOs   = "Unsupported Operating System"
-	osCmdTimeout    = 60 * time.Second
+	osCmdTimeout    = 600 * time.Second
 	portrait        = "portrait"
 	landscape       = "landscape"
 	a3              = "a3"
