@@ -18,10 +18,10 @@ DNS_SERVER_IP=192.168.1.1
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 JMETER_CATALOG_HOST=$(pwd)
 # opening slash to bypass docker on Windows bug
-JMETER_CATALOG_IN_CONTAINER="//deployment/jmeter"
+JMETER_CATALOG_IN_CONTAINER="//dummy/jmeter"
 LOAD_TEST_DIR="${JMETER_CATALOG_IN_CONTAINER}/bin/load"
 # opening slash to bypass docker on Windows bug
-VOLUMES="-v /${JMETER_CATALOG_HOST}:/deployment/jmeter"
+VOLUMES="-v /${JMETER_CATALOG_HOST}:${JMETER_CATALOG_IN_CONTAINER}"
 
 ENVIRONMENT="-e JAVA_HOME=//usr/lib/jvm/jre"
 
