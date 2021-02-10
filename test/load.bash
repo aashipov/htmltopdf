@@ -26,11 +26,6 @@ VOLUMES="-v /${JMETER_CATALOG_HOST}:${JMETER_CATALOG_IN_CONTAINER}"
 ENVIRONMENT="-e JAVA_HOME=//usr/lib/jvm/jre"
 
 echo "Clean up"
-rm -rf ${JMETER_CATALOG_HOST}/client/
-rm -rf ${JMETER_CATALOG_HOST}/server/
-rm -rf ${JMETER_CATALOG_HOST}/bin/load/invoicepdf
-rm -rf ${JMETER_CATALOG_HOST}/bin/load/tablepdf
-
 for server_node_name in "${SERVER_NODE_NAMES[@]}"
 do
 	docker container stop ${server_node_name}
@@ -40,6 +35,11 @@ docker container stop ${CLIENT_NODE_NAME}
 docker container rm ${CLIENT_NODE_NAME}
 docker network rm ${NETWORK_NAME}
 docker network create ${NETWORK_NAME}
+
+rm -rf ${JMETER_CATALOG_HOST}/client/
+rm -rf ${JMETER_CATALOG_HOST}/server/
+rm -rf ${JMETER_CATALOG_HOST}/bin/load/invoicepdf
+rm -rf ${JMETER_CATALOG_HOST}/bin/load/tablepdf
 
 echo "Create servers"
 for server_node_name in "${SERVER_NODE_NAMES[@]}"
