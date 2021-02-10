@@ -44,12 +44,8 @@ Install ```curl```, ```bash```, [patched ```wkhtmltopdf```](https://wkhtmltopdf.
 
 ##### Test #####
 
-```cd temp && bash post.bash```
+```cd test && bash post.bash```
 
 ##### Performance #####
 
 If conversion via ```chromium``` is a must, consider multiple containers (see ```test/farm/farm-refresh.bash```), otherwise use ```wkhtmltopdf```
-
-#### Why Centos ####
-
-Out of the box Chromium Headless

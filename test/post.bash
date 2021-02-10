@@ -2,13 +2,14 @@
 
 WORKDIR=$(pwd)
 TMP_DIR=${WORKDIR}/tmp
-HTML_DIR=${WORKDIR}/html
-TABLE_DIR=${WORKDIR}/table
+LOAD_TEST_DIR=${WORKDIR}/bin/load
+INVOICE_DIR=${LOAD_TEST_DIR}/invoice
+TABLE_DIR=${LOAD_TEST_DIR}/table
 rm -rf ${TMP_DIR}
 mkdir -p ${TMP_DIR}
 
 URL_BASE="http://localhost:8080"
-HTML_PARAMS="--form files=@${HTML_DIR}/index.html --form files=@${HTML_DIR}/style.css --form files=@${HTML_DIR}/logo.png --form files=${HTML_DIR}/dimension.png --form files=@${HTML_DIR}/Roboto-Bold.ttf --form files=@${HTML_DIR}/Roboto-Regular.ttf"
+HTML_PARAMS="--form files=@${INVOICE_DIR}/index.html --form files=@${INVOICE_DIR}/style.css --form files=@${INVOICE_DIR}/logo.png --form files=${INVOICE_DIR}/dimension.png --form files=@${INVOICE_DIR}/Roboto-Bold.ttf --form files=@${INVOICE_DIR}/Roboto-Regular.ttf"
 TABLE_PARAMS="--form files=@${TABLE_DIR}/index.html --form files=@${TABLE_DIR}/style.css"
 
 do_post() {
