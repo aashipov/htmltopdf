@@ -1,5 +1,5 @@
 FROM aashipov/htmltopdf:base
 USER root
-RUN rpm --import https://mirror.go-repo.io/centos/RPM-GPG-KEY-GO-REPO ; \
+RUN rpm --import https://mirror.go-repo.io/centos/RPM-GPG-KEY-GO-REPO && \
 curl -s https://mirror.go-repo.io/centos/go-repo.repo | tee /etc/yum.repos.d/go-repo.repo
-RUN yum install -y chromium golang ; npm install -g node-prune
+RUN yum install -y chromium golang && npm install -g node-prune
