@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.3">
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.4.1">
   <hashTree>
     <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="Test Plan" enabled="true">
       <stringProp name="TestPlan.comments"></stringProp>
@@ -16,9 +16,9 @@
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">100</stringProp>
+          <stringProp name="LoopController.loops">1</stringProp>
         </elementProp>
-        <stringProp name="ThreadGroup.num_threads">100</stringProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
         <stringProp name="ThreadGroup.ramp_time">1</stringProp>
         <boolProp name="ThreadGroup.scheduler">false</boolProp>
         <stringProp name="ThreadGroup.duration"></stringProp>
@@ -26,36 +26,67 @@
         <boolProp name="ThreadGroup.same_user_on_next_iteration">false</boolProp>
       </ThreadGroup>
       <hashTree>
-        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="HTML to PDF" enabled="true">
+        <Arguments guiclass="ArgumentsPanel" testclass="Arguments" testname="Variables" enabled="true">
+          <collectionProp name="Arguments.arguments">
+            <elementProp name="host" elementType="Argument">
+              <stringProp name="Argument.name">host</stringProp>
+              <stringProp name="Argument.value">192.168.1.120</stringProp>
+              <stringProp name="Argument.metadata">=</stringProp>
+            </elementProp>
+            <elementProp name="port" elementType="Argument">
+              <stringProp name="Argument.name">port</stringProp>
+              <stringProp name="Argument.value">8080</stringProp>
+              <stringProp name="Argument.metadata">=</stringProp>
+            </elementProp>
+            <elementProp name="converter" elementType="Argument">
+              <stringProp name="Argument.name">converter</stringProp>
+              <stringProp name="Argument.value">html</stringProp>
+              <stringProp name="Argument.desc">Either html or chromium</stringProp>
+              <stringProp name="Argument.metadata">=</stringProp>
+            </elementProp>
+          </collectionProp>
+        </Arguments>
+        <hashTree/>
+        <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Basic Auth" enabled="true">
+          <collectionProp name="HeaderManager.headers">
+            <elementProp name="" elementType="Header">
+              <stringProp name="Header.name">Authorization</stringProp>
+              <stringProp name="Header.value">Basic dXNlcjpwYXNzd29yZA==</stringProp>
+            </elementProp>
+          </collectionProp>
+          <stringProp name="TestPlan.comments">user:password</stringProp>
+        </HeaderManager>
+        <hashTree/>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="invoice" enabled="true">
           <elementProp name="HTTPsampler.Files" elementType="HTTPFileArgs">
             <collectionProp name="HTTPFileArgs.files">
-              <elementProp name="load/html/dimension.png" elementType="HTTPFileArg">
-                <stringProp name="File.path">load/html/dimension.png</stringProp>
+              <elementProp name="/dummy/jmeter/bin/load/invoice/dimension.png" elementType="HTTPFileArg">
+                <stringProp name="File.path">/dummy/jmeter/bin/load/invoice/dimension.png</stringProp>
                 <stringProp name="File.paramname">files</stringProp>
                 <stringProp name="File.mimetype"></stringProp>
               </elementProp>
-              <elementProp name="load/html/Roboto-Bold.ttf" elementType="HTTPFileArg">
-                <stringProp name="File.path">load/html/Roboto-Bold.ttf</stringProp>
+              <elementProp name="/dummy/jmeter/bin/load/invoice/Roboto-Bold.ttf" elementType="HTTPFileArg">
+                <stringProp name="File.path">/dummy/jmeter/bin/load/invoice/Roboto-Bold.ttf</stringProp>
                 <stringProp name="File.paramname">files</stringProp>
                 <stringProp name="File.mimetype"></stringProp>
               </elementProp>
-              <elementProp name="load/html/Roboto-Regular.ttf" elementType="HTTPFileArg">
-                <stringProp name="File.path">load/html/Roboto-Regular.ttf</stringProp>
+              <elementProp name="/dummy/jmeter/bin/load/invoice/Roboto-Regular.ttf" elementType="HTTPFileArg">
+                <stringProp name="File.path">/dummy/jmeter/bin/load/invoice/Roboto-Regular.ttf</stringProp>
                 <stringProp name="File.paramname">files</stringProp>
                 <stringProp name="File.mimetype"></stringProp>
               </elementProp>
-              <elementProp name="load/html/logo.png" elementType="HTTPFileArg">
-                <stringProp name="File.path">load/html/logo.png</stringProp>
+              <elementProp name="/dummy/jmeter/bin/load/invoice/logo.png" elementType="HTTPFileArg">
+                <stringProp name="File.path">/dummy/jmeter/bin/load/invoice/logo.png</stringProp>
                 <stringProp name="File.paramname">files</stringProp>
                 <stringProp name="File.mimetype"></stringProp>
               </elementProp>
-              <elementProp name="load/html/index.html" elementType="HTTPFileArg">
-                <stringProp name="File.path">load/html/index.html</stringProp>
+              <elementProp name="/dummy/jmeter/bin/load/invoice/index.html" elementType="HTTPFileArg">
+                <stringProp name="File.path">/dummy/jmeter/bin/load/invoice/index.html</stringProp>
                 <stringProp name="File.paramname">files</stringProp>
                 <stringProp name="File.mimetype"></stringProp>
               </elementProp>
-              <elementProp name="load/html/style.css" elementType="HTTPFileArg">
-                <stringProp name="File.path">load/html/style.css</stringProp>
+              <elementProp name="/dummy/jmeter/bin/load/invoice/style.css" elementType="HTTPFileArg">
+                <stringProp name="File.path">/dummy/jmeter/bin/load/invoice/style.css</stringProp>
                 <stringProp name="File.paramname">files</stringProp>
                 <stringProp name="File.mimetype"></stringProp>
               </elementProp>
@@ -68,7 +99,7 @@
           <stringProp name="HTTPSampler.port"></stringProp>
           <stringProp name="HTTPSampler.protocol"></stringProp>
           <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-          <stringProp name="HTTPSampler.path">http://localhost:8080/html</stringProp>
+          <stringProp name="HTTPSampler.path">http://${host}:${port}/${converter}</stringProp>
           <stringProp name="HTTPSampler.method">POST</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">false</boolProp>
           <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
@@ -80,8 +111,8 @@
           <stringProp name="HTTPSampler.response_timeout"></stringProp>
         </HTTPSamplerProxy>
         <hashTree>
-          <ResultSaver guiclass="ResultSaverGui" testclass="ResultSaver" testname="Save PDF to file" enabled="true">
-            <stringProp name="FileSaver.filename">load/pdf/</stringProp>
+          <ResultSaver guiclass="ResultSaverGui" testclass="ResultSaver" testname="PDF" enabled="true">
+            <stringProp name="FileSaver.filename">/dummy/jmeter/bin/load/invoicepdf/${__machineName()}/</stringProp>
             <boolProp name="FileSaver.errorsonly">false</boolProp>
             <boolProp name="FileSaver.successonly">false</boolProp>
             <boolProp name="FileSaver.skipsuffix">false</boolProp>
