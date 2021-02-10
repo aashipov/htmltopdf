@@ -2,8 +2,9 @@
 
 WORKDIR=$(pwd)
 TMP_DIR=${WORKDIR}/tmp
-HTML_DIR=${WORKDIR}/html
-TABLE_DIR=${WORKDIR}/table
+LOAD_TEST_DIR=${WORKDIR}/bin/load
+HTML_DIR=${LOAD_TEST_DIR}/html
+TABLE_DIR=${LOAD_TEST_DIR}/table
 rm -rf ${TMP_DIR}
 mkdir -p ${TMP_DIR}
 
