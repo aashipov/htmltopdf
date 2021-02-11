@@ -1,15 +1,27 @@
 #!/bin/bash
 
-# Run multiple JMeter Remote and a Client in docker against htmltopdf
-# source https://www.blazemeter.com/blog/jmeter-distributed-testing-with-docker
-# 
-
 set -x
 
-NETWORK_NAME="load-test-remote"
+# Run multiple JMeter Remote and a Client in docker against htmltopdf
+# Put enclosing dir to Apache JMeter dir
+# source https://www.blazemeter.com/blog/jmeter-distributed-testing-with-docker
+#
+
 # Add as many as needed
 SERVER_NODE_NAMES=("jmeter-server1" "jmeter-server2" "jmeter-server3")
+# Two variables to hold comma/whitespace-separated server names
+# Simpler than original post $(echo $(printf ",%s" "${SERVER_NODE_NAMES[@]}") | cut -c 2-)
+# https://stackoverflow.com/a/49167382
+SERVER_NODE_NAMES_COMMA_SEPARATED=""
+SERVER_NODE_NAMES_SPACE_SEPARATED=""
+printf -v SERVER_NODE_NAMES_COMMA_SEPARATED ',%s' "${SERVER_NODE_NAMES[@]}"
+SERVER_NODE_NAMES_COMMA_SEPARATED=${SERVER_NODE_NAMES_COMMA_SEPARATED:1}
+printf -v SERVER_NODE_NAMES_SPACE_SEPARATED ' %s' "${SERVER_NODE_NAMES[@]}"
+SERVER_NODE_NAMES_SPACE_SEPARATED=${SERVER_NODE_NAMES_SPACE_SEPARATED:1}
+
 CLIENT_NODE_NAME="jmeter-client"
+NETWORK_NAME="load-test-remote"
+
 IMAGE_NAME="aashipov/htmltopdf:base"
 
 # Bypass Docker on Windows bug - can not find host by hostname from within container
@@ -26,20 +38,17 @@ VOLUMES="-v /${JMETER_CATALOG_HOST}:${JMETER_CATALOG_IN_CONTAINER}"
 ENVIRONMENT="-e JAVA_HOME=//usr/lib/jvm/jre"
 
 echo "Clean up"
-for server_node_name in "${SERVER_NODE_NAMES[@]}"
-do
-	docker container stop ${server_node_name}
-	docker container rm ${server_node_name}
-done
-docker container stop ${CLIENT_NODE_NAME}
-docker container rm ${CLIENT_NODE_NAME}
+docker container stop ${CLIENT_NODE_NAME} ${SERVER_NODE_NAMES_SPACE_SEPARATED}
+docker container rm ${CLIENT_NODE_NAME} ${SERVER_NODE_NAMES_SPACE_SEPARATED}
 docker network rm ${NETWORK_NAME}
-docker network create ${NETWORK_NAME}
 
 rm -rf ${JMETER_CATALOG_HOST}/client/
 rm -rf ${JMETER_CATALOG_HOST}/server/
 rm -rf ${JMETER_CATALOG_HOST}/bin/load/invoicepdf
 rm -rf ${JMETER_CATALOG_HOST}/bin/load/tablepdf
+
+echo "Create network"
+docker network create ${NETWORK_NAME}
 
 echo "Create servers"
 for server_node_name in "${SERVER_NODE_NAMES[@]}"
@@ -48,4 +57,4 @@ do
 done
 
 echo "Create client"
-docker run -d --dns=${DNS_SERVER_IP} --hostname=${CLIENT_NODE_NAME} --name=${CLIENT_NODE_NAME} --network=${NETWORK_NAME} ${ENVIRONMENT} ${VOLUMES} ${IMAGE_NAME} ${JMETER_CATALOG_IN_CONTAINER}/bin/jmeter -n -X -Jclient.rmi.localport=7000 -Jserver.rmi.ssl.disable=true -R $(echo $(printf ",%s" "${SERVER_NODE_NAMES[@]}") | cut -c 2-) -t ${LOAD_TEST_DIR}/Load-test.jmx -l ${JMETER_CATALOG_IN_CONTAINER}/client/Load-test_${TIMESTAMP}.jtl -j ${JMETER_CATALOG_IN_CONTAINER}/client/${CLIENT_NODE_NAME}_${TIMESTAMP}.log -e -o ${JMETER_CATALOG_IN_CONTAINER}/client/web-report-${TIMESTAMP}
+docker run -d --dns=${DNS_SERVER_IP} --hostname=${CLIENT_NODE_NAME} --name=${CLIENT_NODE_NAME} --network=${NETWORK_NAME} ${ENVIRONMENT} ${VOLUMES} ${IMAGE_NAME} ${JMETER_CATALOG_IN_CONTAINER}/bin/jmeter -n -X -Jclient.rmi.localport=7000 -Jserver.rmi.ssl.disable=true -R ${SERVER_NODE_NAMES_COMMA_SEPARATED} -t ${LOAD_TEST_DIR}/Load-test.jmx -l ${JMETER_CATALOG_IN_CONTAINER}/client/Load-test_${TIMESTAMP}.jtl -j ${JMETER_CATALOG_IN_CONTAINER}/client/${CLIENT_NODE_NAME}_${TIMESTAMP}.log -e -o ${JMETER_CATALOG_IN_CONTAINER}/client/web-report-${TIMESTAMP}
