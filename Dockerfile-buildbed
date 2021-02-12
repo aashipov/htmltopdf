@@ -1,5 +1,18 @@
 FROM aashipov/htmltopdf:base
+
+
+ARG MAVEN_VERSION=3.6.3
+ARG BASE_URL=https://apache.osuosl.org/maven/maven-3/${MAVEN_VERSION}/binaries
+ARG MAVEN_DIR=/dummy/maven
+ENV JAVA_HOME=/usr/lib/jvm/jre
+ENV MAVEN_HOME=${MAVEN_DIR}
+ENV PATH=${JAVA_HOME}/bin:${MAVEN_HOME}/bin:${PATH}
+
 USER root
+
 RUN rpm --import https://mirror.go-repo.io/centos/RPM-GPG-KEY-GO-REPO && \
-curl -s https://mirror.go-repo.io/centos/go-repo.repo | tee /etc/yum.repos.d/go-repo.repo
-RUN yum install -y chromium golang && npm install -g node-prune
+curl -s https://mirror.go-repo.io/centos/go-repo.repo | tee /etc/yum.repos.d/go-repo.repo &&\
+curl -fsSL -o /tmp/apache-maven.tar.gz ${BASE_URL}/apache-maven-${MAVEN_VERSION}-bin.tar.gz && \
+mkdir -p ${MAVEN_DIR} && tar -xzf /tmp/apache-maven.tar.gz -C ${MAVEN_DIR} --strip-components=1 && chown -R dummy:dummy ${MAVEN_DIR} && \
+rm -f /tmp/apache-maven.tar.gz
+RUN yum install -y chromium java-11-openjdk-devel golang && npm install -g node-prune
