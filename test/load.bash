@@ -35,8 +35,6 @@ LOAD_TEST_DIR="${JMETER_CATALOG_IN_CONTAINER}/bin/load"
 # opening slash to bypass docker on Windows bug
 VOLUMES="-v /${JMETER_CATALOG_HOST}:${JMETER_CATALOG_IN_CONTAINER}"
 
-ENVIRONMENT="-e JAVA_HOME=//usr/lib/jvm/jre"
-
 echo "Clean up"
 docker container stop ${CLIENT_NODE_NAME} ${SERVER_NODE_NAMES_SPACE_SEPARATED}
 docker container rm ${CLIENT_NODE_NAME} ${SERVER_NODE_NAMES_SPACE_SEPARATED}
@@ -53,8 +51,8 @@ docker network create ${NETWORK_NAME}
 echo "Create servers"
 for server_node_name in "${SERVER_NODE_NAMES[@]}"
 do
-	docker run -d --dns=${DNS_SERVER_IP} --hostname=${server_node_name} --name=${server_node_name} --network=${NETWORK_NAME} ${ENVIRONMENT} ${VOLUMES} ${IMAGE_NAME} ${JMETER_CATALOG_IN_CONTAINER}/bin/jmeter -n -s -Jclient.rmi.localport=7000 -Jserver.rmi.ssl.disable=true -Jserver.rmi.localport=60000 -j ${JMETER_CATALOG_IN_CONTAINER}/server/${server_node_name}_${TIMESTAMP}.log
+	docker run -d --dns=${DNS_SERVER_IP} --hostname=${server_node_name} --name=${server_node_name} --network=${NETWORK_NAME} ${VOLUMES} ${IMAGE_NAME} ${JMETER_CATALOG_IN_CONTAINER}/bin/jmeter -n -s -Jclient.rmi.localport=7000 -Jserver.rmi.ssl.disable=true -Jserver.rmi.localport=60000 -j ${JMETER_CATALOG_IN_CONTAINER}/server/${server_node_name}_${TIMESTAMP}.log
 done
 
 echo "Create client"
-docker run -d --dns=${DNS_SERVER_IP} --hostname=${CLIENT_NODE_NAME} --name=${CLIENT_NODE_NAME} --network=${NETWORK_NAME} ${ENVIRONMENT} ${VOLUMES} ${IMAGE_NAME} ${JMETER_CATALOG_IN_CONTAINER}/bin/jmeter -n -X -Jclient.rmi.localport=7000 -Jserver.rmi.ssl.disable=true -R ${SERVER_NODE_NAMES_COMMA_SEPARATED} -t ${LOAD_TEST_DIR}/Load-test.jmx -l ${JMETER_CATALOG_IN_CONTAINER}/client/Load-test_${TIMESTAMP}.jtl -j ${JMETER_CATALOG_IN_CONTAINER}/client/${CLIENT_NODE_NAME}_${TIMESTAMP}.log -e -o ${JMETER_CATALOG_IN_CONTAINER}/client/web-report-${TIMESTAMP}
+docker run -d --dns=${DNS_SERVER_IP} --hostname=${CLIENT_NODE_NAME} --name=${CLIENT_NODE_NAME} --network=${NETWORK_NAME} ${VOLUMES} ${IMAGE_NAME} ${JMETER_CATALOG_IN_CONTAINER}/bin/jmeter -n -X -Jclient.rmi.localport=7000 -Jserver.rmi.ssl.disable=true -R ${SERVER_NODE_NAMES_COMMA_SEPARATED} -t ${LOAD_TEST_DIR}/Load-test.jmx -l ${JMETER_CATALOG_IN_CONTAINER}/client/Load-test_${TIMESTAMP}.jtl -j ${JMETER_CATALOG_IN_CONTAINER}/client/${CLIENT_NODE_NAME}_${TIMESTAMP}.log -e -o ${JMETER_CATALOG_IN_CONTAINER}/client/web-report-${TIMESTAMP}
