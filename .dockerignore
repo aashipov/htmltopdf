@@ -1,0 +1,13 @@
+.git
+.gitignore
+.dockerignore
+Dockerfile
+Dockerfile-base
+Dockerfile-buildbed
+README.md
+test
+tmp
+build-and-run.bash
+down.bash
+.idea
+*.iml
