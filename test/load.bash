@@ -35,6 +35,9 @@ LOAD_TEST_DIR="${JMETER_CATALOG_IN_CONTAINER}/bin/load"
 # opening slash to bypass docker on Windows bug
 VOLUMES="-v /${JMETER_CATALOG_HOST}:${JMETER_CATALOG_IN_CONTAINER}"
 
+echo "Pull image"
+docker pull ${IMAGE_NAME}
+
 echo "Clean up"
 docker container stop ${CLIENT_NODE_NAME} ${SERVER_NODE_NAMES_SPACE_SEPARATED}
 docker container rm ${CLIENT_NODE_NAME} ${SERVER_NODE_NAMES_SPACE_SEPARATED}
