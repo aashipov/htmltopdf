@@ -23,4 +23,4 @@ do
     docker run -d --name=${node_name} --hostname=${node_name} --net=${NETWORK_NAME} ${HTML_TO_PDF_IMAGE}
 done
 
-docker run -d --name=${HAPROXY} --hostname=${HAPROXY} --net=${NETWORK_NAME} ${PORTS_TO_PUBLISH_HAPROXY} ${VOLUMES_HAPROXY} ${HAPROXY_IMAGE}
+docker run -d --name=${HAPROXY} --hostname=${HAPROXY} --net=${NETWORK_NAME} --ulimit nofile=262144:262144 ${PORTS_TO_PUBLISH_HAPROXY} ${VOLUMES_HAPROXY} ${HAPROXY_IMAGE}
