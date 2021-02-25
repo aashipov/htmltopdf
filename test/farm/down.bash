@@ -8,6 +8,7 @@ for node_name in "${NODE_NAMES[@]}"
 do
     NODE_NAMES_SPACE_SEPARATED+=" ${node_name}"
 done
+NODE_NAMES_SPACE_SEPARATED=${NODE_NAMES_SPACE_SEPARATED:1}
 
 HAPROXY=htmltopdf-haproxy
 NETWORK_NAME=htmltopdf

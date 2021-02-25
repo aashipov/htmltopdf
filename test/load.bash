@@ -10,7 +10,6 @@ set -x
 # Add as many as needed
 SERVER_NODE_NAMES=("jmeter-server1" "jmeter-server2" "jmeter-server3")
 # Two variables to hold comma/whitespace-separated server names
-# Simpler than original post $(echo $(printf ",%s" "${SERVER_NODE_NAMES[@]}") | cut -c 2-)
 SERVER_NODE_NAMES_COMMA_SEPARATED=""
 SERVER_NODE_NAMES_SPACE_SEPARATED=""
 for node_name in "${SERVER_NODE_NAMES[@]}"
@@ -18,6 +17,8 @@ do
     SERVER_NODE_NAMES_COMMA_SEPARATED+=",${node_name}"
 	SERVER_NODE_NAMES_SPACE_SEPARATED+=" ${node_name}"
 done
+SERVER_NODE_NAMES_COMMA_SEPARATED=${SERVER_NODE_NAMES_COMMA_SEPARATED:1}
+SERVER_NODE_NAMES_SPACE_SEPARATED=${SERVER_NODE_NAMES_SPACE_SEPARATED:1}
 
 CLIENT_NODE_NAME="jmeter-client"
 NETWORK_NAME="load-test-remote"
