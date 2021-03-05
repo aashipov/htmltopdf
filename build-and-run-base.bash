@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -x
+set -e
 
 #To ease copy-paste
 IMAGE="aashipov/htmltopdf:base"
