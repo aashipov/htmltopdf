@@ -1,4 +1,4 @@
-### HTML to PDF (chromedp) ###
+### HTML to PDF ###
 
 Receive a static HTML-page named ```index.html``` (and optional CSS, graphics, fonts etc) and produce PDF page(s) via ```wkhtmltopdf``` or ```chromium```
 
@@ -24,13 +24,11 @@ HTTP Endpoints:
 
 ```/chromium``` converts via chromium (slower)
 
-Paper size & orientation ```/chromium/a3/landscape``` prints on landscape oriented A3 canvas
-
-Margins ```/html/left30/right30/top50/bottom50```
+Paper size, margins & orientation ```/html/a3/landscape/top50/right30/bottom50/left30``` or ```/htmla3landscapetop50right30bottom50left30``` prints on landscape oriented A3 canvas
 
 ##### Docker #####
 
-The preferred way - from Docker Hub ```docker pull aashipov/htmltopdf:chromedp && docker run -d --rm --name=htmltopdf -p 8080:8080 aashipov/htmltopdf:chromedp```
+The preferred way - from Docker Hub ```docker pull aashipov/htmltopdf:chromedp && docker run -d --name=htmltopdf -p 8080:8080 aashipov/htmltopdf:chromedp```
 
 OR
 
@@ -38,7 +36,7 @@ Local build & run ```bash build-and-run.bash```
 
 ##### On-premise #####
 
-Install ```curl```, ```bash```, [patched ```wkhtmltopdf```](https://wkhtmltopdf.org/downloads.html), ```chromium```, Go compiler toolchain, add to ```PATH```
+Install ```curl```, ```bash```, [patched ```wkhtmltopdf```](https://wkhtmltopdf.org/downloads.html), [```chromium```](https://www.chromium.org/getting-involved/download-chromium), Go compiler toolchain, add to ```PATH```
 
 ```go build && bash entrypoint.bash```
 
