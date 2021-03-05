@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	mmInInch = 25.4
+	mmInInch             = 25.4
 	maxDevtConnections   = 10
 	networkIdleEventName = "networkIdle"
 )
@@ -44,7 +44,7 @@ func mmToInch(mm string) float64 {
 
 func startCDPClient() *cdp.Client {
 	ctx, _ := context.WithTimeout(context.Background(), osCmdTimeout)
-	devt, err := devtool.New("http://localhost:9222").Version(ctx)
+	devt, err := devtool.New("http://0.0.0.0:9222").Version(ctx)
 	if isError(err) {
 		log.Fatal(err)
 	}
