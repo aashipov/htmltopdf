@@ -24,13 +24,11 @@ HTTP Endpoints:
 
 ```/chromium``` converts via chromium (slower)
 
-Paper size & orientation ```/chromium/a3/landscape``` prints on landscape oriented A3 canvas
-
-Margins ```/html/top50/right30/bottom50/left30```
+Paper size, margins & orientation ```/html/a3/landscape/top50/right30/bottom50/left30``` or ```/htmla3landscapetop50right30bottom50left30``` prints on landscape oriented A3 canvas
 
 ##### Docker #####
 
-The preferred way - from Docker Hub ```docker pull aashipov/htmltopdf:latest && docker run -d --rm --name=htmltopdf -p 8080:8080 aashipov/htmltopdf:latest```
+The preferred way - from Docker Hub ```docker pull aashipov/htmltopdf:latest && docker run -d --name=htmltopdf -p 8080:8080 aashipov/htmltopdf:latest```
 
 OR
 
