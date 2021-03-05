@@ -18,7 +18,7 @@ import (
 
 const (
 	mmInInch               = 25.4
-	maxChromedpConnections = 1_000
+	maxChromedpConnections = 10
 	networkIdleEventName   = "networkIdle"
 )
 
