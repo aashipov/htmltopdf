@@ -17,15 +17,15 @@ import (
 )
 
 const (
-	mmInInch               = 25.4
-	maxChromedpConnections = 10
-	networkIdleEventName   = "networkIdle"
+	mmInInch             = 25.4
+	maxDevtConnections   = 10
+	networkIdleEventName = "networkIdle"
 )
 
 var (
-	chromedpContext, _  = chromedp.NewRemoteAllocator(context.Background(), getChromiumwebSocketDebuggerURL())
-	chromedpLock        = make(chan struct{}, 1)
-	chromedpConnections = 0
+	chromedpContext, _ = chromedp.NewRemoteAllocator(context.Background(), getChromiumwebSocketDebuggerURL())
+	lockChrome       = make(chan struct{}, 1)
+	devtConnections    = 0
 )
 
 //https://github.com/chromedp/chromedp/issues/438
@@ -150,19 +150,19 @@ func (opts *printerOptions) viaChromedp(ctx context.Context) error {
 		}
 		return ioutil.WriteFile(filepath.Join(opts.workdir, resultPdf), pdfBuffer, os.ModePerm)
 	}
-	if chromedpConnections < maxChromedpConnections {
-		chromedpConnections++
+	if devtConnections < maxDevtConnections {
+		devtConnections++
 		err := resolver()
-		chromedpConnections--
+		devtConnections--
 		if isError(err) {
 			return err
 		}
 		return nil
 	}
 	select {
-	case chromedpLock <- struct{}{}:
+	case lockChrome <- struct{}{}:
 		err := resolver()
-		<-chromedpLock // release
+		<-lockChrome // release
 		if isError(err) {
 			return err
 		}

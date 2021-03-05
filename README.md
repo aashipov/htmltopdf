@@ -47,3 +47,5 @@ Install ```curl```, ```bash```, [patched ```wkhtmltopdf```](https://wkhtmltopdf.
 ##### Performance #####
 
 If conversion via ```chromium``` is a must, consider multiple containers (see ```test/farm/farm-refresh.bash```), otherwise use ```wkhtmltopdf```
+
+```maxDevtConnections``` constant limits the number of parallel DevTools connections, larger values cause Chromium to bloat
