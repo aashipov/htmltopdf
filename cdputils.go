@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -21,12 +22,13 @@ import (
 )
 
 const (
-	mmInInch             = 25.4
-	maxDevtConnections   = 1_000
+	mmInInch = 25.4
+	maxDevtConnections   = 10
 	networkIdleEventName = "networkIdle"
 )
 
 var (
+	devtClient = startCDPClient()
 	// nolint: gochecknoglobals
 	lockChrome = make(chan struct{}, 1)
 	// nolint: gochecknoglobals
@@ -38,6 +40,21 @@ func mmToInch(mm string) float64 {
 		return inch / mmInInch
 	}
 	return 0
+}
+
+func startCDPClient() *cdp.Client {
+	ctx, _ := context.WithTimeout(context.Background(), osCmdTimeout)
+	devt, err := devtool.New("http://localhost:9222").Version(ctx)
+	if isError(err) {
+		log.Fatal(err)
+	}
+	// connect to WebSocket URL (page) that speaks the Chrome DevTools Protocol.
+	devtConn, err := rpcc.DialContext(ctx, devt.WebSocketDebuggerURL)
+	if isError(err) {
+		log.Fatal(err)
+	}
+	// create a new CDP Client that uses conn.
+	return cdp.NewClient(devtConn)
 }
 
 //Copy-paste https://github.com/thecodingmachine/gotenberg/blob/master/internal/pkg/printer/chrome.go
@@ -151,22 +168,10 @@ func (opts *printerOptions) cdpPrintToPDFArgs() (*page.PrintToPDFArgs, error) {
 
 //Simplified https://github.com/thecodingmachine/gotenberg/blob/master/internal/pkg/printer/chrome.go
 func (opts *printerOptions) viaCdpInner(ctx context.Context) error {
-	devt, err := devtool.New("http://localhost:9222").Version(ctx)
-	if isError(err) {
-		return err
-	}
-	// connect to WebSocket URL (page) that speaks the Chrome DevTools Protocol.
-	devtConn, err := rpcc.DialContext(ctx, devt.WebSocketDebuggerURL)
-	if isError(err) {
-		return err
-	}
-	defer devtConn.Close()
-	// create a new CDP Client that uses conn.
-	devtClient := cdp.NewClient(devtConn)
 	createBrowserContextArgs := target.NewCreateBrowserContextArgs()
 	newContextTarget, err := devtClient.Target.CreateBrowserContext(ctx, createBrowserContextArgs)
 	if isError(err) {
-		return err
+		log.Fatal(err)
 	}
 	/*
 		close the browser context when done.
