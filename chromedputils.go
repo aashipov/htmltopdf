@@ -30,7 +30,7 @@ var (
 
 //https://github.com/chromedp/chromedp/issues/438
 func getChromiumwebSocketDebuggerURL() string {
-	resp, err := http.Get("http://localhost:9222/json/version")
+	resp, err := http.Get("http://0.0.0.0:9222/json/version")
 	if isError(err) {
 		log.Fatal(err)
 	}
