@@ -8,5 +8,5 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN groupadd dummy && useradd -d /dummy/ -m -g dummy dummy && \
 yum install -y epel-release && curl -sL https://rpm.nodesource.com/setup_lts.x | bash - && \
 # we only need chromium-headless, but there are missing files only available in chromium package https://github.com/elastic/kibana/issues/28408
-yum install -y chromium-headless fontconfig nodejs java-11-openjdk-headless which /tmp/$WKHTMLTOX_RPM && rm -rf /tmp/$WKHTMLTOX_RPM && \
+yum install -y chromium-headless fontconfig nodejs java-11-openjdk-headless /tmp/$WKHTMLTOX_RPM && rm -rf /tmp/$WKHTMLTOX_RPM && \
 yum clean all && ln -s /usr/lib64/chromium-browser/headless_shell /usr/bin/chromium
