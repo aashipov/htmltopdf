@@ -5,7 +5,7 @@ ARG BASE_URL=https://apache.osuosl.org/maven/maven-3/${MAVEN_VERSION}/binaries
 ARG MAVEN_DIR=/dummy/maven
 ARG BUILD_DIR=/dummy/build
 ARG CHOWN_USER_AND_GROUP=dummy:dummy
-ENV JAVA_HOME=/usr/lib/jvm/jre
+ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk
 ENV MAVEN_HOME=${MAVEN_DIR}
 ENV PATH=${JAVA_HOME}/bin:${MAVEN_HOME}/bin:${PATH}
 
