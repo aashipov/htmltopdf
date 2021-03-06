@@ -18,7 +18,7 @@ import (
 
 const (
 	mmInInch             = 25.4
-	maxDevtConnections   = 10
+	maxDevtConnections   = 20
 	networkIdleEventName = "networkIdle"
 )
 
