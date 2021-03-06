@@ -1,13 +1,7 @@
 FROM aashipov/htmltopdf:base
 
-ARG MAVEN_VERSION=3.6.3
-ARG BASE_URL=https://apache.osuosl.org/maven/maven-3/${MAVEN_VERSION}/binaries
-ARG MAVEN_DIR=/dummy/maven
-ARG BUILD_DIR=/dummy/build
-ARG CHOWN_USER_AND_GROUP=dummy:dummy
-ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk
-ENV MAVEN_HOME=${MAVEN_DIR}
-ENV PATH=${JAVA_HOME}/bin:${MAVEN_HOME}/bin:${PATH}
+ARG MAVEN_VERSION=3.6.3 BASE_URL=https://apache.osuosl.org/maven/maven-3/${MAVEN_VERSION}/binaries MAVEN_DIR=/dummy/maven BUILD_DIR=/dummy/build CHOWN_USER_AND_GROUP=dummy:dummy
+ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk MAVEN_HOME=${MAVEN_DIR} PATH=${JAVA_HOME}/bin:${MAVEN_HOME}/bin:${PATH}
 
 USER root
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
