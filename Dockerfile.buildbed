@@ -6,11 +6,10 @@ ENV PATH=${JAVA_HOME}/bin:${MAVEN_HOME}/bin:${PATH}
 
 USER root
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-RUN mkdir -p ${MAVEN_DIR} && chown -R ${CHOWN_USER_AND_GROUP} ${MAVEN_DIR} && \
-mkdir -p ${BUILD_DIR} && chown -R ${CHOWN_USER_AND_GROUP} ${BUILD_DIR} && \
+RUN mkdir -p ${MAVEN_DIR} && mkdir -p ${BUILD_DIR} && \
 rpm --import https://mirror.go-repo.io/centos/RPM-GPG-KEY-GO-REPO && \
 curl -s https://mirror.go-repo.io/centos/go-repo.repo | tee /etc/yum.repos.d/go-repo.repo && \
 curl -fsSL -o /tmp/apache-maven.tar.gz ${BASE_URL}/apache-maven-${MAVEN_VERSION}-bin.tar.gz && \
 tar -xzf /tmp/apache-maven.tar.gz -C ${MAVEN_DIR} --strip-components=1 && \
-chown -R ${CHOWN_USER_AND_GROUP} ${MAVEN_DIR} && rm -f /tmp/apache-maven.tar.gz && \
+chown -R ${CHOWN_USER_AND_GROUP} /dummy/ && rm -f /tmp/apache-maven.tar.gz && \
 yum install -y chromium java-11-openjdk-devel golang && npm install -g node-prune && yum clean all
