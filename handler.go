@@ -22,12 +22,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		// convert
-		if err := opts.print(); isError(err) {
+		if err := opts.print(w); isError(err) {
 			log.Print(err)
-			buildInternalServerError(w, err)
-			return
-		}
-		if err := opts.sendPdf(w); isError(err) {
 			buildInternalServerError(w, err)
 		}
 	// otherwise respond {"status":"UP"}
