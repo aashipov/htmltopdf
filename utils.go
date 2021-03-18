@@ -78,10 +78,7 @@ func getWkhtmltopdfExecutableName() string {
 }
 
 func isError(err error) bool {
-	if err != nil {
-		return true
-	}
-	return false
+	return nil != err
 }
 
 func enableGracefulShutdown(server *http.Server) {
