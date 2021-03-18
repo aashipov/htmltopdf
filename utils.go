@@ -47,7 +47,6 @@ const (
 )
 
 var (
-	wkhtmltopdfExecutableName = getWkhtmltopdfExecutableName()
 	// A4 Paper size A4
 	A4 = paperSize{widthMm: "210", heightMm: "297"}
 	// A3 Paper size A3
@@ -65,16 +64,6 @@ func fillMarginNameReMap() map[string]*regexp.Regexp {
 	m[top] = regexp.MustCompile(top + oneOrMoreDigits)
 	m[bottom] = regexp.MustCompile(bottom + oneOrMoreDigits)
 	return m
-}
-
-func getWkhtmltopdfExecutableName() string {
-	if linux == osName {
-		return wkhtmltopdf
-	}
-	if windows == osName {
-		return "wkhtmltopdf.exe"
-	}
-	return unsupportedOs
 }
 
 func isError(err error) bool {
@@ -178,8 +167,8 @@ func (opts *printerOptions) print(w http.ResponseWriter) error {
 	defer cancel()
 	if chromium == opts.executableName {
 		opts.viaChromedp(ctx)
-	} else if wkhtmltopdfExecutableName == opts.executableName {
-		cmd := *exec.CommandContext(ctx, wkhtmltopdfExecutableName,
+	} else if wkhtmltopdf == opts.executableName {
+		cmd := *exec.CommandContext(ctx, wkhtmltopdf,
 			"--enable-local-file-access", "--print-media-type", "--no-stop-slow-scripts", "--disable-smart-shrinking",
 			"--margin-bottom", opts.bottom, "--margin-left", opts.left, "--margin-right", opts.right, "--margin-top", opts.top,
 			"--page-width", opts.paperSize.widthMm, "--page-height", opts.paperSize.heightMm, "--orientation", opts.orientation,
@@ -192,6 +181,24 @@ func (opts *printerOptions) print(w http.ResponseWriter) error {
 		return errors.New("Unknown executable " + opts.executableName)
 	}
 	return opts.sendPdf(w)
+}
+
+func htmlToPdf(w http.ResponseWriter, r *http.Request) {
+	workdir := createWorkDir()
+	defer os.RemoveAll(workdir)
+	opts := buildPrinterOpions(workdir, r)
+	// Store multipart
+	if err := receiveFiles(w, r, workdir); isError(err) {
+		log.Print(err)
+		buildInternalServerError(w, err)
+		return
+	}
+	// convert
+	if err := opts.print(w); isError(err) {
+		log.Print(err)
+		buildInternalServerError(w, err)
+		return
+	}
 }
 
 // Office paper size
@@ -213,17 +220,18 @@ type printerOptions struct {
 	pdf            []byte
 }
 
-func buildPrinterOpions(workdir string, url string) *printerOptions {
+func buildPrinterOpions(workdir string, r *http.Request) *printerOptions {
 	opts := new(printerOptions)
 	opts.workdir = workdir
 	opts.pdf = htmlToPdfConverterFailed
+	url := r.URL.String()
 	if strings.Contains(url, landscape) {
 		opts.orientation = landscape
 	} else {
 		opts.orientation = portrait
 	}
 	if strings.Contains(url, html) {
-		opts.executableName = wkhtmltopdfExecutableName
+		opts.executableName = wkhtmltopdf
 	} else if strings.Contains(url, chromium) {
 		opts.executableName = chromium
 	}
