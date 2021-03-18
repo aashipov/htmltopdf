@@ -32,7 +32,7 @@ const (
 	chromium        = "chromium"
 	indexHTML       = "index." + html
 	resultPdf       = "result.pdf"
-	noIndexHTML     = "No " + indexHTML
+	noIndexHTML     = "no " + indexHTML
 	unsupportedOs   = "Unsupported Operating System"
 	osCmdTimeout    = 600 * time.Second
 	portrait        = "portrait"
