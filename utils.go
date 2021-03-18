@@ -47,7 +47,6 @@ const (
 )
 
 var (
-	wkhtmltopdfExecutableName = "wkhtmltopdf"
 	// A4 Paper size A4
 	A4 = paperSize{widthMm: "210", heightMm: "297"}
 	// A3 Paper size A3
@@ -168,8 +167,8 @@ func (opts *printerOptions) print(w http.ResponseWriter) error {
 	defer cancel()
 	if chromium == opts.executableName {
 		opts.viaCdp(ctx)
-	} else if wkhtmltopdfExecutableName == opts.executableName {
-		cmd := *exec.CommandContext(ctx, wkhtmltopdfExecutableName,
+	} else if wkhtmltopdf == opts.executableName {
+		cmd := *exec.CommandContext(ctx, wkhtmltopdf,
 			"--enable-local-file-access", "--print-media-type", "--no-stop-slow-scripts", "--disable-smart-shrinking",
 			"--margin-bottom", opts.bottom, "--margin-left", opts.left, "--margin-right", opts.right, "--margin-top", opts.top,
 			"--page-width", opts.paperSize.widthMm, "--page-height", opts.paperSize.heightMm, "--orientation", opts.orientation,
@@ -232,7 +231,7 @@ func buildPrinterOpions(workdir string, r *http.Request) *printerOptions {
 		opts.orientation = portrait
 	}
 	if strings.Contains(url, html) {
-		opts.executableName = wkhtmltopdfExecutableName
+		opts.executableName = wkhtmltopdf
 	} else if strings.Contains(url, chromium) {
 		opts.executableName = chromium
 	}
