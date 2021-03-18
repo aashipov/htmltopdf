@@ -47,7 +47,7 @@ const (
 )
 
 var (
-	wkhtmltopdfExecutableName = getWkhtmltopdfExecutableName()
+	wkhtmltopdfExecutableName = "wkhtmltopdf"
 	// A4 Paper size A4
 	A4 = paperSize{widthMm: "210", heightMm: "297"}
 	// A3 Paper size A3
@@ -65,16 +65,6 @@ func fillMarginNameReMap() map[string]*regexp.Regexp {
 	m[top] = regexp.MustCompile(top + oneOrMoreDigits)
 	m[bottom] = regexp.MustCompile(bottom + oneOrMoreDigits)
 	return m
-}
-
-func getWkhtmltopdfExecutableName() string {
-	if linux == osName {
-		return wkhtmltopdf
-	}
-	if windows == osName {
-		return "wkhtmltopdf.exe"
-	}
-	return unsupportedOs
 }
 
 func isError(err error) bool {
@@ -189,9 +179,27 @@ func (opts *printerOptions) print(w http.ResponseWriter) error {
 		}
 		opts.readResultPdf()
 	} else {
-		return errors.New("Unknown executable " + opts.executableName)
+		return errors.New("unknown executable " + opts.executableName)
 	}
 	return opts.sendPdf(w)
+}
+
+func htmlToPdf(w http.ResponseWriter, r *http.Request) {
+	workdir := createWorkDir()
+	defer os.RemoveAll(workdir)
+	opts := buildPrinterOpions(workdir, r)
+	// Store multipart
+	if err := receiveFiles(w, r, workdir); isError(err) {
+		log.Print(err)
+		buildInternalServerError(w, err)
+		return
+	}
+	// convert
+	if err := opts.print(w); isError(err) {
+		log.Print(err)
+		buildInternalServerError(w, err)
+		return
+	}
 }
 
 // Office paper size
@@ -213,10 +221,11 @@ type printerOptions struct {
 	pdf            []byte
 }
 
-func buildPrinterOpions(workdir string, url string) *printerOptions {
+func buildPrinterOpions(workdir string, r *http.Request) *printerOptions {
 	opts := new(printerOptions)
 	opts.workdir = workdir
 	opts.pdf = htmlToPdfConverterFailed
+	url := r.URL.String()
 	if strings.Contains(url, landscape) {
 		opts.orientation = landscape
 	} else {
