@@ -5,10 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strconv"
 
@@ -24,7 +22,7 @@ const (
 
 var (
 	chromedpContext, _ = chromedp.NewRemoteAllocator(context.Background(), getChromiumwebSocketDebuggerURL())
-	lockChrome       = make(chan struct{}, 1)
+	lockChrome         = make(chan struct{}, 1)
 	devtConnections    = 0
 )
 
@@ -144,11 +142,7 @@ func (opts *printerOptions) viaChromedp(ctx context.Context) error {
 	resolver := func() error {
 		taskCtx, cancelCtxt := chromedp.NewContext(chromedpContext) // create new tab
 		defer cancelCtxt()
-		var pdfBuffer []byte
-		if err := chromedp.Run(taskCtx, buildChromedpTasks(opts, &pdfBuffer)); isError(err) {
-			log.Fatal(err)
-		}
-		return ioutil.WriteFile(filepath.Join(opts.workdir, resultPdf), pdfBuffer, os.ModePerm)
+		return chromedp.Run(taskCtx, buildChromedpTasks(opts, &opts.pdf))
 	}
 	if devtConnections < maxDevtConnections {
 		devtConnections++
