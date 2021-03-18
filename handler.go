@@ -4,7 +4,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -28,7 +27,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			buildInternalServerError(w, err)
 			return
 		}
-		if err := sendPdf(w, filepath.Join(workdir, resultPdf)); isError(err) {
+		if err := opts.sendPdf(w); isError(err) {
 			buildInternalServerError(w, err)
 		}
 	// otherwise respond {"status":"UP"}

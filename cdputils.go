@@ -6,9 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
-	"os"
 	"path/filepath"
 	"strconv"
 
@@ -236,9 +234,7 @@ func (opts *printerOptions) viaCdpInner(ctx context.Context) error {
 	if isError(err) {
 		return err
 	}
-	if err := ioutil.WriteFile(filepath.Join(opts.workdir, resultPdf), printToPDF.Data, os.ModePerm); isError(err) {
-		return err
-	}
+	opts.pdf = printToPDF.Data
 	return nil
 }
 

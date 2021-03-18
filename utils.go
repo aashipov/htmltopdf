@@ -2,7 +2,7 @@
 package main
 
 import (
-	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"io"
@@ -51,9 +51,10 @@ var (
 	// A4 Paper size A4
 	A4 = paperSize{widthMm: "210", heightMm: "297"}
 	// A3 Paper size A3
-	A3                = paperSize{widthMm: "297", heightMm: "420"}
-	oneOrMoreDigitsRe = regexp.MustCompile(oneOrMoreDigits)
-	marginNameReMap   = fillMarginNameReMap()
+	A3                       = paperSize{widthMm: "297", heightMm: "420"}
+	oneOrMoreDigitsRe        = regexp.MustCompile(oneOrMoreDigits)
+	marginNameReMap          = fillMarginNameReMap()
+	htmlToPdfConverterFailed = []byte("Something went wrong with HTML to PDF converter")
 )
 
 // margin name -> regexp
@@ -151,23 +152,28 @@ func receiveFiles(w http.ResponseWriter, r *http.Request, workdir string) error 
 }
 
 // Send PDF to client
-func sendPdf(w http.ResponseWriter, currentPdfFile string) error {
-	file, err := os.Open(currentPdfFile)
-	if isError(err) {
-		return err
+func (opts *printerOptions) sendPdf(w http.ResponseWriter) error {
+	if bytes.Equal(htmlToPdfConverterFailed, opts.pdf) {
+		return errors.New(string(htmlToPdfConverterFailed))
 	}
-	br := bufio.NewReader(file)
-	if _, err := io.Copy(w, br); isError(err) {
-		return err
-	}
+	w.Write(opts.pdf)
 	w.Header().Set("Content-Disposition", "attachment;filename=\""+resultPdf+"\"")
 	w.Header().Set("Content-Type", "application/pdf")
-	return file.Close()
+	return nil
 }
 
 func health(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte("{\"status\":\"UP\"}"))
+}
+
+func (opts *printerOptions) readResultPdf() error {
+	buf, err := os.ReadFile(filepath.Join(opts.workdir, resultPdf))
+	opts.pdf = buf
+	if isError(err) {
+		return err
+	}
+	return nil
 }
 
 func (opts *printerOptions) print() error {
@@ -181,7 +187,10 @@ func (opts *printerOptions) print() error {
 			"--margin-bottom", opts.bottom, "--margin-left", opts.left, "--margin-right", opts.right, "--margin-top", opts.top,
 			"--page-width", opts.paperSize.widthMm, "--page-height", opts.paperSize.heightMm, "--orientation", opts.orientation,
 			filepath.Join(opts.workdir, indexHTML), filepath.Join(opts.workdir, resultPdf))
-		return cmd.Run()
+		if err := cmd.Run(); isError(err) {
+			return err
+		}
+		return opts.readResultPdf()
 	} else {
 		return errors.New("Unknown executable " + opts.executableName)
 	}
@@ -203,11 +212,13 @@ type printerOptions struct {
 	right          string
 	top            string
 	bottom         string
+	pdf            []byte
 }
 
 func buildPrinterOpions(workdir string, url string) *printerOptions {
 	opts := new(printerOptions)
 	opts.workdir = workdir
+	opts.pdf = htmlToPdfConverterFailed
 	if strings.Contains(url, landscape) {
 		opts.orientation = landscape
 	} else {
