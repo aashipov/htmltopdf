@@ -42,7 +42,7 @@ func mmToInch(mm string) float64 {
 
 func startCDPClient() *cdp.Client {
 	ctx := context.Background()
-	devt, err := devtool.New("http://127.0.0.1:9222").Version(ctx)
+	devt, err := devtool.New("http://0.0.0.0:9222").Version(ctx)
 	if isError(err) {
 		log.Fatal(err)
 	}
