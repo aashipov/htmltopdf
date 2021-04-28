@@ -30,6 +30,10 @@ Paper size, margins & orientation ```/html/a3/landscape/top50/right30/bottom50/l
 
 The preferred way - from Docker Hub ```docker pull aashipov/htmltopdf:latest && docker run -d --name=htmltopdf -p 8080:8080 aashipov/htmltopdf:latest```
 
+If you’re running Docker on Linux use tmpfs to store incoming files and result.pdf:
+
+```docker pull aashipov/htmltopdf:latest && docker run -d --name=htmltopdf -p 8080:8080 --tmpfs /dummy/tmp aashipov/htmltopdf:latest```
+
 OR
 
 Local build & run ```bash build-and-run.bash```
