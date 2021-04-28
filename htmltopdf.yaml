@@ -41,7 +41,13 @@ spec:
             port: 8080
           initialDelaySeconds: 5
           periodSeconds: 3
-
+        volumeMounts:
+        - mountPath: /dummy/tmp
+          name: tmp-volume
+      volumes:
+        - name: tmp-volume
+          emptyDir:
+            medium: Memory
 ---
 apiVersion: v1
 kind: Service
