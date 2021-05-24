@@ -1,4 +1,4 @@
-FROM aashipov/htmltopdf:buildbed AS builder
+FROM aashipov/docker:builder AS builder
 USER root
 WORKDIR /dummy/
 COPY --chown=dummy:dummy ./ ./
@@ -6,10 +6,9 @@ RUN chmod +x /dummy/entrypoint.bash
 USER dummy
 RUN go build
 
-FROM aashipov/htmltopdf:base
+FROM aashipov/docker:wknch
 USER root
 EXPOSE 8080
-COPY --from=builder /usr/lib64/chromium-browser/swiftshader/ /usr/lib64/chromium-browser/swiftshader/
 COPY --from=builder --chown=dummy:dummy /dummy/htmltopdf /dummy/
 COPY --from=builder --chown=dummy:dummy /dummy/entrypoint.bash /dummy/
 WORKDIR /dummy/
