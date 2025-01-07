@@ -16,7 +16,6 @@ import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static org.dummy.HtmlToPdfServlet.*;
 import static org.dummy.HtmlToPdfUtils.INDEX_HTML;
 import static org.dummy.HtmlToPdfUtils.RESULT_PDF;
 import static org.dummy.OsUtils.*;
@@ -26,13 +25,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 abstract class AppBaseTest {
     private static final Logger LOG = Logger.getLogger(AppBaseTest.class.getSimpleName());
-    private static final String FILENAME_EQUALS = "filename=";
-    private static final String CONTENT_TYPE = "Content-Type";
-    private static final String MULTIPART = "multipart/form-data";
-    private static final String BOUNDARY = "boundary=";
     private static final char[] MULTIPART_CHARS =
             "-_1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
                     .toCharArray();
+    private static final String CONTENT_TYPE = "Content-Type";
+    private static final String MULTIPART = "multipart/form-data";
+    private static final String FILENAME_EQUALS = "filename=";
+    private static final String BOUNDARY = "boundary=";
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder().build();
     private static final Random RANDOM_GENERATOR = new Random();
 
@@ -94,7 +93,7 @@ abstract class AppBaseTest {
                                                                String boundary) throws IOException {
         List<byte[]> byteArrays = new ArrayList<>();
         byte[] separator = ("--" + boundary
-                + "\r\n" + CONTENT_DISPOSITION + ": form-data; name=")
+                + "\r\n" + HtmlToPdfServlet.CONTENT_DISPOSITION + ": form-data; name=")
                 .getBytes(StandardCharsets.UTF_8);
         for (Map.Entry<Object, Object> entry : data.entrySet()) {
             if (entry.getValue() instanceof List) {
@@ -103,9 +102,9 @@ abstract class AppBaseTest {
                     String mimeType = Files.probeContentType(path);
                     byteArrays.add((
                             "\"files\"; "
-                                    + FILENAME_EQUALS + "\"" + path.getFileName() + "\"\r\n"
-                                    + CONTENT_TYPE + ": " + mimeType
-                                    + "\r\n\r\n").getBytes(StandardCharsets.UTF_8));
+                            + FILENAME_EQUALS + "\"" + path.getFileName() + "\"\r\n"
+                            + CONTENT_TYPE + ": " + mimeType
+                            + "\r\n\r\n").getBytes(StandardCharsets.UTF_8));
                     byteArrays.add(Files.readAllBytes(path));
                     byteArrays.add("\r\n".getBytes(StandardCharsets.UTF_8));
                 }
@@ -132,7 +131,8 @@ abstract class AppBaseTest {
             String boundary = generateBoundary();
             Map<Object, Object> data = Map.of("files", List.of(html, jpg));
 
-            HttpRequest request = HttpRequest.newBuilder().uri(new URI(url))
+            HttpRequest request;
+            request = HttpRequest.newBuilder().uri(new URI(url))
                     .headers(CONTENT_TYPE, MULTIPART + ";" + BOUNDARY + boundary)
                     .POST(ofMultipartData(data, boundary))
                     .build();
@@ -156,27 +156,19 @@ abstract class AppBaseTest {
         if (isLinux()) {
             OsCommandWrapper wrapper = execute("curl " + BASE_URL);
             assertTrue(wrapper.isOK());
-            assertEquals(STATUS_UP, wrapper.getOutputString());
+            assertEquals(HtmlToPdfServlet.STATUS_UP, wrapper.getOutputString());
         }
     }
 
     @Test
     void jvppeteerTest() throws IOException, URISyntaxException, InterruptedException {
-        System.setProperty("chromium.harness", "jvppeteer");
-        doTestConvertWithCurl(BASE_URL + "/" + CHROMIUM);
-        doTestConvertWithHttpClient(BASE_URL + "/" + CHROMIUM);
-    }
-
-    @Test
-    void chromeDevtoolsKotlinTest() throws IOException, URISyntaxException, InterruptedException {
-        System.setProperty("chromium.harness", "chrome-devtools-kotlin");
-        doTestConvertWithCurl(BASE_URL + "/" + CHROMIUM);
-        doTestConvertWithHttpClient(BASE_URL + "/" + CHROMIUM);
+        doTestConvertWithCurl(BASE_URL + "/" + HtmlToPdfServlet.CHROMIUM);
+        doTestConvertWithHttpClient(BASE_URL + "/" + HtmlToPdfServlet.CHROMIUM);
     }
 
     @Test
     void htmlTest() throws IOException, URISyntaxException, InterruptedException {
-        doTestConvertWithCurl(BASE_URL + "/" + HTML);
-        doTestConvertWithHttpClient(BASE_URL + "/" + HTML);
+        doTestConvertWithCurl(BASE_URL + "/" + HtmlToPdfServlet.HTML);
+        doTestConvertWithHttpClient(BASE_URL + "/" + HtmlToPdfServlet.HTML);
     }
 }

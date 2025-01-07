@@ -1,26 +1,43 @@
 package org.dummy;
 
-import com.ruiyun.jvppeteer.core.Puppeteer;
-import com.ruiyun.jvppeteer.core.browser.Browser;
-import com.ruiyun.jvppeteer.core.page.Page;
-import com.ruiyun.jvppeteer.options.PDFOptions;
-import com.ruiyun.jvppeteer.options.PageNavigateOptions;
-import org.hildan.chrome.devtools.domains.page.PrintToPDFRequest;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.StringJoiner;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.dummy.OsUtils.*;
+import static org.dummy.OsUtils.DEFAULT_CHARSET;
+import static org.dummy.OsUtils.DELIMITER_LF;
+import static org.dummy.OsUtils.DELIMITER_SPACE;
+import org.dummy.OsUtils.OsCommandWrapper;
 import static org.dummy.OsUtils.OsCommandWrapper.executeAsync;
 import static org.dummy.OsUtils.OsCommandWrapper.executeAsynchronously;
+import static org.dummy.OsUtils.createDirectory;
+import static org.dummy.OsUtils.deleteFilesAndDirectories;
+import static org.dummy.OsUtils.getProcessIdByProcessName;
+import static org.dummy.OsUtils.getRandomUUID;
+import static org.dummy.OsUtils.isBlank;
+import static org.dummy.OsUtils.isWindows;
+import static org.dummy.OsUtils.killProcessTree;
+
+import com.ruiyun.jvppeteer.api.core.Browser;
+import com.ruiyun.jvppeteer.api.core.Page;
+import com.ruiyun.jvppeteer.cdp.core.Puppeteer;
+import com.ruiyun.jvppeteer.cdp.entities.ConnectOptions;
+import com.ruiyun.jvppeteer.cdp.entities.GoToOptions;
+import com.ruiyun.jvppeteer.cdp.entities.PDFOptions;
+import com.ruiyun.jvppeteer.common.PuppeteerLifeCycle;
 
 /**
  * HTML to PDF via chromium or wkhtmltopdf.
@@ -30,7 +47,6 @@ public final class HtmlToPdfUtils {
     private static final Logger LOG = Logger.getLogger(HtmlToPdfUtils.class.getSimpleName());
     private static final String CHROMIUM_OPTIONS = "--headless --remote-debugging-address=0.0.0.0 --remote-debugging-port=9222 --no-sandbox --no-zygote --disable-setuid-sandbox --disable-notifications --disable-geolocation --disable-infobars --disable-session-crashed-bubble --disable-dev-shm-usage --disable-gpu --disable-translate --disable-extensions --disable-features=site-per-process --disable-hang-monitor --disable-popup-blocking --disable-prompt-on-repost --disable-background-networking --disable-breakpad --disable-client-side-phishing-detection --disable-sync --disable-default-apps --hide-scrollbars --metrics-recording-only --mute-audio --no-first-run --enable-automation --password-store=basic --use-mock-keychain --unlimited-storage --safebrowsing-disable-auto-update --font-render-hinting=none --disable-sync-preferences --user-data-dir=" + Paths.get(".").resolve(".config").resolve("headless_shell");
     private static final String CHROMIUM_EXECUTABLE = isWindows() ? "chrome.exe" : "chromium";
-    private static final String CHROME_DEVTOOLS_KOTLIN = "chrome-devtools-kotlin";
     private static OsCommandWrapper chromiumHeadlessWrapper = null;
     private static Future<Void> chromiumHeadlessFuture = null;
     private static Browser puppeteerBrowser = null;
@@ -59,14 +75,14 @@ public final class HtmlToPdfUtils {
     }
 
     /**
-     * Build {@link Puppeteer} {@link PageNavigateOptions} for rendering to finish.
+     * Build {@link Puppeteer} {@link GoToOptions} for rendering to finish.
      *
-     * @return {@link PageNavigateOptions}
+     * @return {@link GoToOptions}
      */
-    private static PageNavigateOptions buildPuppeteerPageNavigateOptions() {
-        PageNavigateOptions no = new PageNavigateOptions();
-        no.setWaitUntil(List.of("load", "domcontentloaded", "networkidle0", "networkidle2"));
-        return no;
+    private static GoToOptions buildPuppeteerGoToOptions() {
+        GoToOptions goToOptions = new GoToOptions();
+        goToOptions.setWaitUntil(List.of(PuppeteerLifeCycle.load, PuppeteerLifeCycle.domcontentloaded, PuppeteerLifeCycle.networkIdle, PuppeteerLifeCycle.networkIdle2));
+        return goToOptions;
     }
 
     /**
@@ -103,7 +119,7 @@ public final class HtmlToPdfUtils {
                 "Something went wrong with HTML to PDF converter".getBytes(DEFAULT_CHARSET);
         private static final int MAX_EXECUTE_TIME = 600_000;
         private static final double MM_IN_INCH = 25.4;
-        private static final PageNavigateOptions PUPPETEER_PAGE_READY = buildPuppeteerPageNavigateOptions();
+        private static final GoToOptions PUPPETEER_PAGE_READY = buildPuppeteerGoToOptions();
 
         private PaperSize paperSize = PaperSize.A4;
         private boolean landscape = false;
@@ -262,44 +278,22 @@ public final class HtmlToPdfUtils {
             map.put(BOTTOM_MARGIN_NAME, LEFT_PARENTHESIS + BOTTOM_MARGIN_NAME + RIGHT_PARENTHESIS + ONE_OR_MORE_DIGITS_GROUP);
             return map;
         }
-
-        private static String getEnv(String name, String defaultValue) {
-            String val = System.getenv(name);
-            return val != null ? val : defaultValue;
-        }
-
-        private static boolean isChromeDevtoolsKotlin() {
-            return getEnv("CHROMIUM_HARNESS", CHROME_DEVTOOLS_KOTLIN).equals(CHROME_DEVTOOLS_KOTLIN)
-                    || System.getProperty("chromium.harness", CHROME_DEVTOOLS_KOTLIN).equals(CHROME_DEVTOOLS_KOTLIN);
-        }
-
-        private static Double mmToInch(String mm) {
-            Double mmd = Double.parseDouble(mm);
-            return mmd / MM_IN_INCH;
-        }
-
-        private PrintToPDFRequest buildChromeDevtoolsKtPrintToPDFRequest() {
-            return new PrintToPDFRequest(
-                    this.landscape,
-                    Boolean.FALSE,
-                    Boolean.FALSE,
-                    null,
-                    mmToInch(this.paperSize.width),
-                    mmToInch(this.paperSize.height),
-                    mmToInch(this.top),
-                    mmToInch(this.bottom),
-                    mmToInch(this.left),
-                    mmToInch(this.right),
-                    null,
-                    null,
-                    null,
-                    Boolean.FALSE,
-                    null
-            );
+        
+        private static ConnectOptions connectOptions() {
+            ConnectOptions o = new ConnectOptions();
+            o.setBrowserURL("http://0.0.0.0:9222");
+            return o;
         }
 
         private static Page getPuppeteerNewPage() {
-            return puppeteerBrowser == null ? Puppeteer.connect("http://0.0.0.0:9222").newPage() : puppeteerBrowser.newPage();
+            if (puppeteerBrowser == null) {
+                try {
+                    puppeteerBrowser = Puppeteer.connect(connectOptions());
+                } catch (Exception ex) {
+                    Logger.getLogger(HtmlToPdfUtils.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+            return puppeteerBrowser.newPage();
         }
 
         private PDFOptions buildPuppeteerChromiumPDFOptions() {
@@ -345,21 +339,13 @@ public final class HtmlToPdfUtils {
 
         private void viaChromium() {
             try {
-                if (isChromeDevtoolsKotlin()) {
-                    String pdfBase64 = ChromiumWrapper.pdf(
-                            FILE_URI_PREFIX + this.getWorkdir().resolve(INDEX_HTML).toAbsolutePath(),
-                            this.buildChromeDevtoolsKtPrintToPDFRequest()
-                    );
-                    this.pdf = Base64.getDecoder().decode(pdfBase64);
-                } else {
-                    Page page = getPuppeteerNewPage();
-                    page.setDefaultTimeout(MAX_EXECUTE_TIME);
-                    page.setDefaultNavigationTimeout(MAX_EXECUTE_TIME);
-                    page.goTo(FILE_URI_PREFIX + this.getWorkdir().resolve(INDEX_HTML).toAbsolutePath(), PUPPETEER_PAGE_READY);
-                    this.pdf = page.pdf(buildPuppeteerChromiumPDFOptions());
-                    page.close();
-                }
-            } catch (IOException | InterruptedException e) {
+                Page page = getPuppeteerNewPage();
+                page.setDefaultTimeout(MAX_EXECUTE_TIME);
+                page.setDefaultNavigationTimeout(MAX_EXECUTE_TIME);
+                page.goTo(FILE_URI_PREFIX + this.getWorkdir().resolve(INDEX_HTML).toAbsolutePath(), PUPPETEER_PAGE_READY);
+                this.pdf = page.pdf(buildPuppeteerChromiumPDFOptions());
+                page.close();
+            } catch (IOException | InterruptedException | ExecutionException e) {
                 LOG.log(Level.SEVERE, "Chromium error", e);
             }
         }

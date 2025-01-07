@@ -4,71 +4,85 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.StringJoiner;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
-import com.ruiyun.jvppeteer.core.Puppeteer;
-import com.ruiyun.jvppeteer.core.browser.Browser;
-import com.ruiyun.jvppeteer.core.page.Page;
-import com.ruiyun.jvppeteer.options.LaunchOptions;
-import com.ruiyun.jvppeteer.options.LaunchOptionsBuilder;
-import com.ruiyun.jvppeteer.options.PDFOptions;
-import com.ruiyun.jvppeteer.options.PageNavigateOptions;
-import static java.util.stream.Collectors.toUnmodifiableList;
-import static org.dummy.EmptinessUtils.isBlank;
-import static org.dummy.OsUtils.*;
+
+import static org.dummy.OsUtils.DEFAULT_CHARSET;
+import static org.dummy.OsUtils.DELIMITER_LF;
+import static org.dummy.OsUtils.DELIMITER_SPACE;
+import org.dummy.OsUtils.OsCommandWrapper;
+import static org.dummy.OsUtils.OsCommandWrapper.executeAsync;
+import static org.dummy.OsUtils.OsCommandWrapper.executeAsynchronously;
+import static org.dummy.OsUtils.createDirectory;
+import static org.dummy.OsUtils.deleteFilesAndDirectories;
+import static org.dummy.OsUtils.getProcessIdByProcessName;
+import static org.dummy.OsUtils.getRandomUUID;
+import static org.dummy.OsUtils.isBlank;
+import static org.dummy.OsUtils.isWindows;
+import static org.dummy.OsUtils.killProcessTree;
+
+import com.ruiyun.jvppeteer.api.core.Browser;
+import com.ruiyun.jvppeteer.api.core.Page;
+import com.ruiyun.jvppeteer.cdp.core.Puppeteer;
+import com.ruiyun.jvppeteer.cdp.entities.ConnectOptions;
+import com.ruiyun.jvppeteer.cdp.entities.GoToOptions;
+import com.ruiyun.jvppeteer.cdp.entities.PDFOptions;
+import com.ruiyun.jvppeteer.common.PuppeteerLifeCycle;
 
 /**
- * HTML to PDF via wkhtmltopdf(.exe).
+ * HTML to PDF via chromium or wkhtmltopdf.
  */
 public final class HtmlToPdfUtils {
 
     private static final Logger LOG = Logger.getLogger(HtmlToPdfUtils.class.getSimpleName());
-    private static final int MAX_EXECUTE_TIME = 600_000;
     private static final String CHROMIUM_OPTIONS = "--headless --remote-debugging-address=0.0.0.0 --remote-debugging-port=9222 --no-sandbox --no-zygote --disable-setuid-sandbox --disable-notifications --disable-geolocation --disable-infobars --disable-session-crashed-bubble --disable-dev-shm-usage --disable-gpu --disable-translate --disable-extensions --disable-features=site-per-process --disable-hang-monitor --disable-popup-blocking --disable-prompt-on-repost --disable-background-networking --disable-breakpad --disable-client-side-phishing-detection --disable-sync --disable-default-apps --hide-scrollbars --metrics-recording-only --mute-audio --no-first-run --enable-automation --password-store=basic --use-mock-keychain --unlimited-storage --safebrowsing-disable-auto-update --font-render-hinting=none --disable-sync-preferences --user-data-dir=" + Paths.get(".").resolve(".config").resolve("headless_shell");
-    private static final String WKHTMLTOPDF_EXECUTABLE = "wkhtmltopdf";
-    private static final String CHROMIUM_EXECUTABLE = System.getProperty("chromium.executable", "/usr/bin/chromium");
-    private static final Browser browser = launchChromium();
-    private static final PageNavigateOptions pageReady = buildPageNavigateOptions();
+    private static final String CHROMIUM_EXECUTABLE = isWindows() ? "chrome.exe" : "chromium";
+    private static OsCommandWrapper chromiumHeadlessWrapper = null;
+    private static Future<Void> chromiumHeadlessFuture = null;
+    private static Browser puppeteerBrowser = null;
     public static final String INDEX_HTML = "index.html";
     public static final String RESULT_PDF = "result.pdf";
 
-    /**
-     * Build {@link PageNavigateOptions} for rendering to finish.
-     * @return {@link PageNavigateOptions}
-     */
-    private static PageNavigateOptions buildPageNavigateOptions() {
-        PageNavigateOptions no = new PageNavigateOptions();
-        no.setWaitUntil(Stream.of("load", "domcontentloaded", "networkidle0", "networkidle2").collect(toUnmodifiableList()));
-        return no;
+    public static void restartChromiumHeadless() {
+        shutdownChromiumHeadless();
+        chromiumHeadlessWrapper = new OsCommandWrapper(CHROMIUM_EXECUTABLE + DELIMITER_SPACE + CHROMIUM_OPTIONS);
+        chromiumHeadlessFuture = executeAsynchronously(chromiumHeadlessWrapper);
+        Runtime.getRuntime().addShutdownHook(new Thread(HtmlToPdfUtils::shutdownChromiumHeadless));
     }
 
-    /**
-     * Build headless Chromium {@link LaunchOptions}.
-     * @return {@link LaunchOptions}
-     */
-    private static LaunchOptions buildChromiumLaunchOptions() {
-        List<String> args = Arrays.asList(CHROMIUM_OPTIONS.split(DELIMITER_SPACE));
-        return (new LaunchOptionsBuilder())
-                .withIgnoreDefaultArgs(true)
-                .withArgs(args)
-                .withExecutablePath(CHROMIUM_EXECUTABLE)
-                .build();
-    }
-
-    /**
-     * Start Chromium headless.
-     * @return {@link Browser}
-     */
-    private static Browser launchChromium() {
-        try {
-            return Puppeteer.launch(buildChromiumLaunchOptions());
-        } catch (IOException e) {
-            throw new IllegalStateException("Can not launch Chromium", e);
+    private static void shutdownChromiumHeadless() {
+        if (chromiumHeadlessFuture != null) {
+            chromiumHeadlessFuture.cancel(true);
         }
+        if (chromiumHeadlessWrapper != null && chromiumHeadlessWrapper.hasPid()) {
+            killProcessTree("" + chromiumHeadlessWrapper.getPid());
+        } else {
+            Collection<String> chromiumPids = getProcessIdByProcessName(CHROMIUM_EXECUTABLE);
+            for (String chromiumPid : chromiumPids) {
+                killProcessTree(chromiumPid);
+            }
+        }
+    }
+
+    /**
+     * Build {@link Puppeteer} {@link GoToOptions} for rendering to finish.
+     *
+     * @return {@link GoToOptions}
+     */
+    private static GoToOptions buildPuppeteerGoToOptions() {
+        GoToOptions goToOptions = new GoToOptions();
+        goToOptions.setWaitUntil(List.of(PuppeteerLifeCycle.load, PuppeteerLifeCycle.domcontentloaded, PuppeteerLifeCycle.networkIdle, PuppeteerLifeCycle.networkIdle2));
+        return goToOptions;
     }
 
     /**
@@ -100,16 +114,18 @@ public final class HtmlToPdfUtils {
         private static final String MILLIMETER_ACRONYM = "mm";
         private static final String FILE_URI_PREFIX = "file://";
         private static final Map<String, String> MARGIN_NAME_TO_REGEX = fillMarginNameRegexMap();
-
-        public static final Path TMP_DIR = Paths.get(".").resolve(TMP);
+        static final Path TMP_DIR = Paths.get(".").resolve(TMP);
         private static final byte[] HTML_TO_PDF_CONVERTER_FAILED_PLACEHOLDER =
                 "Something went wrong with HTML to PDF converter".getBytes(DEFAULT_CHARSET);
+        private static final int MAX_EXECUTE_TIME = 600_000;
+        private static final double MM_IN_INCH = 25.4;
+        private static final GoToOptions PUPPETEER_PAGE_READY = buildPuppeteerGoToOptions();
 
         private PaperSize paperSize = PaperSize.A4;
         private boolean landscape = false;
         private String left = DEFAULT_MARGIN;
         private String right = DEFAULT_MARGIN;
-        private String top  = DEFAULT_MARGIN;
+        private String top = DEFAULT_MARGIN;
         private String bottom = DEFAULT_MARGIN;
         private final Path workdir = TMP_DIR.resolve(getRandomUUID());
         private Boolean chromium = Boolean.FALSE;
@@ -118,43 +134,12 @@ public final class HtmlToPdfUtils {
 
         /**
          * Constructor.
+         *
          * @param url url with converter name and printout settings
          */
         public PrinterOptions(String url) {
             this.printoutSettings(url);
             createDirectory(this.workdir);
-        }
-
-        /**
-         * HTML to PDF.
-         */
-        public void htmlToPdf() {
-            if (Boolean.TRUE.equals(this.chromium)) {
-                try {
-                    Page page = browser.newPage();
-                    page.setDefaultTimeout(MAX_EXECUTE_TIME);
-                    page.setDefaultNavigationTimeout(MAX_EXECUTE_TIME);
-                    page.goTo(FILE_URI_PREFIX + this.getWorkdir().resolve(INDEX_HTML).toAbsolutePath(), pageReady);
-                    this.pdf = page.pdf(buildChromiumPDFOptions());
-                    page.close();
-                } catch (IOException e) {
-                    LOG.log(Level.SEVERE, "Chromium error", e);
-                } catch (InterruptedException e) {
-                    LOG.log(Level.SEVERE, "Chromium was interrupted", e);
-                    Thread.currentThread().interrupt();
-                }
-            } else {
-                this.buildOsCommandWrapper();
-                executeAsync(this.wrapper);
-                if (!this.wrapper.isOK()) {
-                    LOG.info(this.wrapper.getOutputString() + DELIMITER_LF + this.wrapper.getErrorString());
-                }
-                try {
-                    this.pdf = Files.readAllBytes(this.getWorkdir().resolve(RESULT_PDF));
-                } catch (IOException e) {
-                    LOG.log(Level.SEVERE, "Can not read " + RESULT_PDF, e);
-                }
-            }
         }
 
         public Path getWorkdir() {
@@ -165,14 +150,9 @@ public final class HtmlToPdfUtils {
             deleteFilesAndDirectories(this.workdir);
         }
 
-        private PrinterOptions buildOsCommandWrapper() {
-            this.wrapper = new OsUtils.OsCommandWrapper(this.buildWkhtmltopdfCmd());
-            this.wrapper.setWorkdir(this.workdir).setMaxExecuteTime(MAX_EXECUTE_TIME);
-            return this;
-        }
-
         /**
          * Is there an index.html file in workdir?.
+         *
          * @return is there?
          */
         public boolean isIndexHtml() {
@@ -182,6 +162,7 @@ public final class HtmlToPdfUtils {
 
         /**
          * Get PDF file content.
+         *
          * @return bytes
          */
         public byte[] getPdf() {
@@ -190,6 +171,7 @@ public final class HtmlToPdfUtils {
 
         /**
          * Was PDF created?
+         *
          * @return was?
          */
         public boolean isPdf() {
@@ -197,8 +179,21 @@ public final class HtmlToPdfUtils {
         }
 
         /**
+         * HTML to PDF.
+         */
+        @SuppressWarnings("java:S2142")
+        public void htmlToPdf() {
+            if (Boolean.TRUE.equals(this.chromium)) {
+                viaChromium();
+            } else {
+                viaWkhtmltoPdf();
+            }
+        }
+
+        /**
          * Does string matches regex
-         * @param regex regex
+         *
+         * @param regex  regex
          * @param string string
          * @return matches?
          */
@@ -209,7 +204,8 @@ public final class HtmlToPdfUtils {
 
         /**
          * Extract groups matching regex.
-         * @param regex regex
+         *
+         * @param regex  regex
          * @param string string
          * @return {@link List} {@link String} of groups matched
          */
@@ -225,6 +221,7 @@ public final class HtmlToPdfUtils {
 
         /**
          * Extract paper size and margins from URL.
+         *
          * @param url request URL
          */
         @SuppressWarnings("java:S3776")
@@ -281,15 +278,39 @@ public final class HtmlToPdfUtils {
             map.put(BOTTOM_MARGIN_NAME, LEFT_PARENTHESIS + BOTTOM_MARGIN_NAME + RIGHT_PARENTHESIS + ONE_OR_MORE_DIGITS_GROUP);
             return map;
         }
+        
+        private static ConnectOptions connectOptions() {
+            ConnectOptions o = new ConnectOptions();
+            o.setBrowserURL("http://0.0.0.0:9222");
+            return o;
+        }
+
+        private static Page getPuppeteerNewPage() {
+            if (puppeteerBrowser == null) {
+                try {
+                    puppeteerBrowser = Puppeteer.connect(connectOptions());
+                } catch (Exception ex) {
+                    Logger.getLogger(HtmlToPdfUtils.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+            return puppeteerBrowser.newPage();
+        }
+
+        private PDFOptions buildPuppeteerChromiumPDFOptions() {
+            PDFOptions opts = new PDFOptions();
+            opts.setLandscape(this.landscape);
+            opts.setWidth(this.paperSize.width + MILLIMETER_ACRONYM);
+            opts.setHeight(this.paperSize.height + MILLIMETER_ACRONYM);
+            opts.getMargin().setTop(this.top + MILLIMETER_ACRONYM);
+            opts.getMargin().setRight(this.right + MILLIMETER_ACRONYM);
+            opts.getMargin().setBottom(this.bottom + MILLIMETER_ACRONYM);
+            opts.getMargin().setLeft(this.left + MILLIMETER_ACRONYM);
+            return opts;
+        }
 
         private String buildWkhtmltopdfCmd() {
             StringJoiner sj = new StringJoiner(DELIMITER_SPACE);
-            sj.add(WKHTMLTOPDF_EXECUTABLE);
-            sj.add("--enable-local-file-access");
-            sj.add("--print-media-type");
-            sj.add("--no-stop-slow-scripts");
-            sj.add("--disable-smart-shrinking");
-            sj.add("--margin-left");
+            sj.add("wkhtmltopdf --enable-local-file-access --print-media-type --no-stop-slow-scripts --disable-smart-shrinking --margin-left");
             sj.add(this.left);
             sj.add("--margin-right");
             sj.add(this.right);
@@ -310,16 +331,36 @@ public final class HtmlToPdfUtils {
             return sj.toString();
         }
 
-        private PDFOptions buildChromiumPDFOptions() {
-            PDFOptions opts = new PDFOptions();
-            opts.setLandscape(this.landscape);
-            opts.setWidth(this.paperSize.width + MILLIMETER_ACRONYM);
-            opts.setHeight(this.paperSize.height + MILLIMETER_ACRONYM);
-            opts.getMargin().setTop(this.top + MILLIMETER_ACRONYM);
-            opts.getMargin().setRight(this.right + MILLIMETER_ACRONYM);
-            opts.getMargin().setBottom(this.bottom + MILLIMETER_ACRONYM);
-            opts.getMargin().setLeft(this.left + MILLIMETER_ACRONYM);
-            return opts;
+        private PrinterOptions buildWkhtmltopdfWrapper() {
+            this.wrapper = new OsUtils.OsCommandWrapper(this.buildWkhtmltopdfCmd());
+            this.wrapper.setWorkdir(this.workdir).setMaxExecuteTime(MAX_EXECUTE_TIME);
+            return this;
+        }
+
+        private void viaChromium() {
+            try {
+                Page page = getPuppeteerNewPage();
+                page.setDefaultTimeout(MAX_EXECUTE_TIME);
+                page.setDefaultNavigationTimeout(MAX_EXECUTE_TIME);
+                page.goTo(FILE_URI_PREFIX + this.getWorkdir().resolve(INDEX_HTML).toAbsolutePath(), PUPPETEER_PAGE_READY);
+                this.pdf = page.pdf(buildPuppeteerChromiumPDFOptions());
+                page.close();
+            } catch (IOException | InterruptedException | ExecutionException e) {
+                LOG.log(Level.SEVERE, "Chromium error", e);
+            }
+        }
+
+        private void viaWkhtmltoPdf() {
+            this.buildWkhtmltopdfWrapper();
+            executeAsync(this.wrapper);
+            if (!this.wrapper.isOK()) {
+                LOG.info(this.wrapper.getOutputString() + DELIMITER_LF + this.wrapper.getErrorString());
+            }
+            try {
+                this.pdf = Files.readAllBytes(this.getWorkdir().resolve(RESULT_PDF));
+            } catch (IOException e) {
+                LOG.log(Level.SEVERE, "Can not read " + RESULT_PDF, e);
+            }
         }
     }
 
@@ -328,15 +369,15 @@ public final class HtmlToPdfUtils {
      */
     private enum PaperSize {
         A4("210", "297"),
-        A3("297", "420")
-        ;
+        A3("297", "420");
 
         private final String width;
         private final String height;
 
         /**
          * Constructor.
-         * @param width width
+         *
+         * @param width  width
          * @param height height
          */
         PaperSize(String width, String height) {

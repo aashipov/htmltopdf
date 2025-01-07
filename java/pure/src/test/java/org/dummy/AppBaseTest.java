@@ -158,14 +158,6 @@ abstract class AppBaseTest {
 
     @Test
     void jvppeteerTest() throws IOException, URISyntaxException, InterruptedException {
-        System.setProperty("chromium.harness", "jvppeteer");
-        doTestConvertWithCurl(BASE_URL + "/" + CHROMIUM);
-        doTestConvertWithHttpClient(BASE_URL + "/" + CHROMIUM);
-    }
-
-    @Test
-    void chromeDevtoolsKotlinTest() throws IOException, URISyntaxException, InterruptedException {
-        System.setProperty("chromium.harness", "chrome-devtools-kotlin");
         doTestConvertWithCurl(BASE_URL + "/" + CHROMIUM);
         doTestConvertWithHttpClient(BASE_URL + "/" + CHROMIUM);
     }

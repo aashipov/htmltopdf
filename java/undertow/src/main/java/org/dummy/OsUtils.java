@@ -13,7 +13,6 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import static org.dummy.EmptinessUtils.isBlank;
 
 /**
  * Operating system utils.
@@ -26,7 +25,7 @@ public final class OsUtils {
     private static final ExecutorService OS_CMD_EXECUTOR_SERVICE =
             Executors.newWorkStealingPool(Math.max(Runtime.getRuntime().availableProcessors(), 2) * 8);
 
-    private static final String ESCAPED_DOUBLE_QUOTATION_MARK = "\"";
+    protected static final String ESCAPED_DOUBLE_QUOTATION_MARK = "\"";
     private static final String ESCAPED_SINGLE_QUOTATION_MARK = "\'";
     public static final String DELIMITER_SPACE = " ";
     public static final String DELIMITER_LF = "\n";
@@ -38,7 +37,6 @@ public final class OsUtils {
     public static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
     public static final String DEFAULT_CHARSET_NAME = DEFAULT_CHARSET.name();
     private static final String WINDOWS_1251_CHARSET_NAME = "windows-1251";
-
     private static final String OS_NAME_PROPERTY = "os.name";
     private static final String OS_VERSION_PROPERTY = "os.version";
     private static final String WIN = "win";
@@ -71,44 +69,6 @@ public final class OsUtils {
     }
 
     /**
-     * Join collection of string.
-     * @param c collection of string
-     * @param d delimiter
-     * @return join
-     */
-    private static String collectionOfStringsToString(Collection<String> c, String d) {
-        if (null != c && !c.isEmpty()) {
-            StringJoiner joiner = new StringJoiner(d);
-            for (String item : c) {
-                if (!isBlank(item)) {
-                    joiner.add(item);
-                }
-            }
-            return joiner.toString();
-        } else {
-            return EMPTY_STRING;
-        }
-    }
-
-    /**
-     * InputStream to List of String.
-     * @param source InputStream
-     * @param charset charset
-     * @param inout List of String
-     */
-    public static void inputStreamToListOfStrings(InputStream source, Charset charset, List<String> inout) {
-        String line;
-        try (InputStreamReader inputStreamReader = new InputStreamReader(source, charset);
-             BufferedReader bufferedReader = new BufferedReader(inputStreamReader)) {
-            while ((line = bufferedReader.readLine()) != null) {
-                inout.add(line);
-            }
-        } catch (IOException e) {
-            // no interest in
-        }
-    }
-
-    /**
      * Java Process API wrapper.
      */
     public static class OsCommandWrapper {
@@ -119,12 +79,16 @@ public final class OsUtils {
         private final List<String> error = new ArrayList<>(0);
         private final List<String> output = new ArrayList<>(0);
         private final Timestamp start = Timestamp.from(Instant.now());
+        /**
+         * Milliseconds for the command to finish off.
+         */
         private Integer maxExecuteTime = null;
         private Path workdir = null;
         private boolean translateCmd = false;
 
         /**
          * Constructor.
+         *
          * @param cmd command text
          */
         public OsCommandWrapper(String cmd) {
@@ -194,6 +158,7 @@ public final class OsUtils {
 
         /**
          * If a wrapper has PID?.
+         *
          * @return has it?
          */
         public boolean hasPid() {
@@ -201,16 +166,8 @@ public final class OsUtils {
         }
 
         /**
-         * Is command running longer than maxExecuteTime?.
-         * @return is it?
-         */
-        public boolean isOverdue() {
-            return null != this.maxExecuteTime
-                    && ((System.currentTimeMillis() - this.getStart().toInstant().toEpochMilli()) > this.maxExecuteTime);
-        }
-
-        /**
          * Is exitCode == 0?.
+         *
          * @return is?
          */
         public boolean isOK() {
@@ -220,25 +177,25 @@ public final class OsUtils {
         /**
          * Err due to timeout.
          */
-        public void timeout() {
+        private void timeout() {
             this.setExitCode(EXIT_CODE_ERROR).getError().add(TIMEOUT_MSG);
         }
 
         /**
          * Set EXIT_CODE_SUCCESS if it's EXIT_CODE_RUNNING.
          */
-        public void successOutOfRunning() {
+        private void successOutOfRunning() {
             if (EXIT_CODE_RUNNING == this.getExitCode()) {
                 this.setExitCode(EXIT_CODE_SUCCESS);
             }
         }
 
         public String getErrorString() {
-            return collectionOfStringsToString(this.error, DELIMITER_LF);
+            return listOfStringsToString(this.error, DELIMITER_LF);
         }
 
         public String getOutputString() {
-            return collectionOfStringsToString(this.output, DELIMITER_LF);
+            return listOfStringsToString(this.output, DELIMITER_LF);
         }
 
         @Override
@@ -254,34 +211,221 @@ public final class OsUtils {
                     .add("workdir=" + workdir)
                     .toString();
         }
-    }
-
-    /**
-     * {@link Callable} {@link OsCommandWrapper}.
-     */
-    private static class OsCommandCallable implements Callable<Void> {
-
-        private final OsCommandWrapper result;
 
         /**
-         * Constructor by wrapper.
-         * @param wrapper wrapper
+         * Crack a command line.
+         *
+         * @param toProcess the command line to process
+         * @return the command line broken into strings. An empty or null toProcess
+         * parameter results in a zero sized array
+         * Copyright see org.apache.commons.exec.CommandLine
+         * Removes single quote and double quote characters
          */
-        public OsCommandCallable(OsCommandWrapper wrapper) {
-            this.result = wrapper;
+        @SuppressWarnings("java:S3776")
+        public static String[] translateCommandline(final String toProcess) {
+            if (null == toProcess || 0 == toProcess.length()) {
+                // no command? no string
+                return new String[0];
+            }
+            // parse with a simple finite state machine
+            final int normal = 0;
+            final int inQuote = 1;
+            final int inDoubleQuote = 2;
+            int state = normal;
+            final StringTokenizer tok = new StringTokenizer(toProcess, CMD_LINE_TOKENIZER_DELIMITERS, true);
+            final ArrayList<String> list = new ArrayList<>(0);
+            StringBuilder current = new StringBuilder();
+            boolean lastTokenHasBeenQuoted = false;
+            while (tok.hasMoreTokens()) {
+                final String nextTok = tok.nextToken();
+                switch (state) {
+                    case inQuote:
+                        if (ESCAPED_SINGLE_QUOTATION_MARK.equals(nextTok)) {
+                            lastTokenHasBeenQuoted = true;
+                            state = normal;
+                        } else {
+                            current.append(nextTok);
+                        }
+                        break;
+                    case inDoubleQuote:
+                        if (ESCAPED_DOUBLE_QUOTATION_MARK.equals(nextTok)) {
+                            lastTokenHasBeenQuoted = true;
+                            state = normal;
+                        } else {
+                            current.append(nextTok);
+                        }
+                        break;
+                    default:
+                        if (ESCAPED_SINGLE_QUOTATION_MARK.equals(nextTok)) {
+                            state = inQuote;
+                        } else if (ESCAPED_DOUBLE_QUOTATION_MARK.equals(nextTok)) {
+                            state = inDoubleQuote;
+                        } else if (DELIMITER_SPACE.equals(nextTok)) {
+                            if (lastTokenHasBeenQuoted || 0 != current.length()) {
+                                list.add(current.toString());
+                                current = new StringBuilder();
+                            }
+                        } else {
+                            current.append(nextTok);
+                        }
+                        lastTokenHasBeenQuoted = false;
+                        break;
+                }
+            }
+            if (lastTokenHasBeenQuoted || 0 != current.length()) {
+                list.add(current.toString());
+            }
+            if (state == inQuote || state == inDoubleQuote) {
+                throw new IllegalArgumentException("Unbalanced quotes in " + toProcess);
+            }
+            final String[] args = new String[list.size()];
+            return list.toArray(args);
         }
 
-        @Override
-        public Void call() throws Exception {
-            if (null != this.result) {
-                execute(this.result);
+        private static void inputStreamsToWrapper(InputStream inputStream, InputStream errorStream, OsCommandWrapper wrapper) {
+            try {
+                if (inputStream.available() > 0) {
+                    inputStreamToListOfStrings(inputStream, getConsoleCodepage(), wrapper.getOutput());
+                }
+                if (errorStream.available() > 0) {
+                    inputStreamToListOfStrings(errorStream, getConsoleCodepage(), wrapper.getError());
+                }
+            } catch (IOException e) {
+                LOG.log(Level.FINE, "InputStream to wrapper copy error", e);
             }
-            return null;
+        }
+
+        private static void processInputStreamsToWrapper(Process p, OsCommandWrapper wrapper) {
+            inputStreamsToWrapper(p.getInputStream(), p.getErrorStream(), wrapper);
+        }
+
+        /**
+         * Execute wrapped OS command in the same thread.
+         *
+         * @param wrapper wrapper
+         */
+        @SuppressWarnings({"java:S3776", "java:S2142"})
+        public static void execute(OsCommandWrapper wrapper) {
+            Process p = null;
+            String[] callee = wrapper.isTranslateCmd() ? translateCommandline(wrapper.getCmd()) : wrapper.getCmd().split(DELIMITER_SPACE);
+            try {
+                if (null == wrapper.getWorkdir()) {
+                    p = Runtime.getRuntime().exec(callee);
+                } else {
+                    p = Runtime.getRuntime().exec(callee, null, wrapper.getWorkdir().toFile());
+                }
+                if (p != null) {
+                    TimeUnit.MILLISECONDS.sleep(PROCESS_INNER_STATE_CHANGE_TIMEOUT);
+                    wrapper.setPid((int) p.pid());
+                    if (wrapper.hasPid()) {
+                        TimeUnit.MILLISECONDS.sleep(PROCESS_INNER_STATE_CHANGE_TIMEOUT);
+                        if (p.isAlive()) {
+                            while (p.isAlive()) {
+                                TimeUnit.MILLISECONDS.sleep(PROCESS_INNER_STATE_CHANGE_TIMEOUT);
+                                processInputStreamsToWrapper(p, wrapper);
+                            }
+                        }
+                        processInputStreamsToWrapper(p, wrapper);
+                        wrapper.setExitCode(p.exitValue());
+                    } else {
+                        wrapper.getError().add("Error creating OS process");
+                        wrapper.setExitCode(EXIT_CODE_ERROR);
+                    }
+                }
+            } catch (IOException e) {
+                LOG.log(Level.SEVERE, "Error executing OS command {0} {1}", new Object[]{wrapper, e.getMessage()});
+                wrapper.setExitCode(EXIT_CODE_ERROR);
+                wrapper.getError().add(e.getLocalizedMessage());
+            } catch (InterruptedException e) {
+                LOG.log(Level.INFO, "OS command execution interrupted {0} {1}", new Object[]{wrapper, e.getMessage()});
+                wrapper.getError().add(e.getLocalizedMessage());
+            }
+        }
+
+        /**
+         * Execute OS command synchronously.
+         *
+         * @param cmd command
+         * @return {@link OsCommandWrapper}
+         */
+        public static OsCommandWrapper execute(String cmd) {
+            OsCommandWrapper wrapper = new OsCommandWrapper(cmd);
+            execute(wrapper);
+            return wrapper;
+        }
+
+        private static void timeoutAndCleanUp(OsCommandWrapper wrapper) {
+            wrapper.timeout();
+            if (wrapper.hasPid()) {
+                killProcessTree(String.valueOf(wrapper.getPid()));
+            }
+        }
+
+        /**
+         * Execute OS command asynchronously.
+         *
+         * @param wrapper {@link OsCommandWrapper}
+         * @return {@link OsCommandWrapper#execute(OsCommandWrapper)} {@link Future}
+         */
+        public static Future<Void> executeAsynchronously(OsCommandWrapper wrapper) {
+            return OS_CMD_EXECUTOR_SERVICE.submit(() -> {
+                execute(wrapper);
+                return null;
+            });
+        }
+
+        /**
+         * Execute OS command in another thread.
+         *
+         * @param wrapper {@link OsCommandWrapper}
+         */
+        @SuppressWarnings("java:S2142")
+        public static void executeAsync(OsCommandWrapper wrapper) {
+            try {
+                Future<Void> future = executeAsynchronously(wrapper);
+                if (wrapper.getMaxExecuteTime() != null) {
+                    future.get(wrapper.getMaxExecuteTime(), TimeUnit.MILLISECONDS);
+                } else {
+                    future.get();
+                }
+                wrapper.successOutOfRunning();
+            } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                timeoutAndCleanUp(wrapper);
+            }
+        }
+
+        /**
+         * Execute OS command asynchronously.
+         *
+         * @param cmd command
+         * @return {@link OsCommandWrapper}
+         */
+        public static OsCommandWrapper executeAsync(String cmd) {
+            OsCommandWrapper wrapper = new OsCommandWrapper(cmd);
+            executeAsync(wrapper);
+            return wrapper;
+        }
+
+        /**
+         * Execute OS command in another thread.
+         *
+         * @param cmd            command
+         * @param maxExecuteTime timeout
+         * @return {@link OsCommandWrapper}
+         */
+        public static OsCommandWrapper executeAsync(String cmd, Integer maxExecuteTime) {
+            OsCommandWrapper wrapper = new OsCommandWrapper(cmd);
+            if (null != maxExecuteTime) {
+                wrapper.setMaxExecuteTime(maxExecuteTime);
+            }
+            executeAsync(wrapper);
+            return wrapper;
         }
     }
 
     /**
      * Is Operating System Microsoft Windows (R).
+     *
      * @return is MS Windows?
      */
     private static boolean isWindowsInternal() {
@@ -290,6 +434,7 @@ public final class OsUtils {
 
     /**
      * Is Operating System Microsoft Windows (R).
+     *
      * @return is MS Windows?
      */
     public static boolean isWindows() {
@@ -298,6 +443,7 @@ public final class OsUtils {
 
     /**
      * Is Operating System a Linux Distro.
+     *
      * @return is Linux?
      */
     private static boolean isLinuxInternal() {
@@ -306,6 +452,7 @@ public final class OsUtils {
 
     /**
      * Is Operating System a Linux Distro.
+     *
      * @return is Linux?
      */
     public static boolean isLinux() {
@@ -314,6 +461,7 @@ public final class OsUtils {
 
     /**
      * Get Operating System version.
+     *
      * @return operating system version.
      */
     private static String getOSVersion() {
@@ -322,6 +470,7 @@ public final class OsUtils {
 
     /**
      * Is MS Windows a WMIC one (version equal 6.0 or newer).
+     *
      * @return Is MS Windows version equal 6.0 or newer?
      */
     private static boolean isWmicWindows() {
@@ -330,6 +479,7 @@ public final class OsUtils {
 
     /**
      * Assume OS console codepage name.
+     *
      * @return codepage name
      */
     public static Charset getConsoleCodepage() {
@@ -342,6 +492,7 @@ public final class OsUtils {
 
     /**
      * Get random UUID as string.
+     *
      * @return random UUID
      */
     public static String getRandomUUID() {
@@ -350,6 +501,7 @@ public final class OsUtils {
 
     /**
      * Get {@link Path} to OS directory for temporary files (e.g., /tmp in most of *nix).
+     *
      * @return {@link Path}
      */
     public static Path getTempDirectory() {
@@ -358,6 +510,7 @@ public final class OsUtils {
 
     /**
      * Get {@link Path} to a temporary file/directory in OS directory for temporary files.
+     *
      * @return {@link Path}
      * Won't create file/directory
      */
@@ -367,6 +520,7 @@ public final class OsUtils {
 
     /**
      * Get {@link Path} to a temporary file/directory in OS directory for temporary files.
+     *
      * @param extension file extension. e.g. "zip"
      * @return {@link Path}
      * Won't create file/directory
@@ -379,206 +533,62 @@ public final class OsUtils {
     }
 
     /**
-     * Crack a command line.
-     * @param toProcess the command line to process
-     * @return the command line broken into strings. An empty or null toProcess
-     * parameter results in a zero sized array
-     * Copyright see org.apache.commons.exec.CommandLine
-     * Removes single quote and double quote characters
+     * Create directory.
+     *
+     * @param dir {@link Path}
+     * @return {@link Path}
      */
-    @SuppressWarnings("java:S3776")
-    public static String[] translateCommandline(final String toProcess) {
-        if (null == toProcess || 0 == toProcess.length()) {
-            // no command? no string
-            return new String[0];
-        }
-        // parse with a simple finite state machine
-        final int normal = 0;
-        final int inQuote = 1;
-        final int inDoubleQuote = 2;
-        int state = normal;
-        final StringTokenizer tok = new StringTokenizer(toProcess, CMD_LINE_TOKENIZER_DELIMITERS, true);
-        final ArrayList<String> list = new ArrayList<>(0);
-        StringBuilder current = new StringBuilder();
-        boolean lastTokenHasBeenQuoted = false;
-        while (tok.hasMoreTokens()) {
-            final String nextTok = tok.nextToken();
-            switch (state) {
-                case inQuote:
-                    if (ESCAPED_SINGLE_QUOTATION_MARK.equals(nextTok)) {
-                        lastTokenHasBeenQuoted = true;
-                        state = normal;
-                    } else {
-                        current.append(nextTok);
-                    }
-                    break;
-                case inDoubleQuote:
-                    if (ESCAPED_DOUBLE_QUOTATION_MARK.equals(nextTok)) {
-                        lastTokenHasBeenQuoted = true;
-                        state = normal;
-                    } else {
-                        current.append(nextTok);
-                    }
-                    break;
-                default:
-                    if (ESCAPED_SINGLE_QUOTATION_MARK.equals(nextTok)) {
-                        state = inQuote;
-                    } else if (ESCAPED_DOUBLE_QUOTATION_MARK.equals(nextTok)) {
-                        state = inDoubleQuote;
-                    } else if (DELIMITER_SPACE.equals(nextTok)) {
-                        if (lastTokenHasBeenQuoted || 0 != current.length()) {
-                            list.add(current.toString());
-                            current = new StringBuilder();
-                        }
-                    } else {
-                        current.append(nextTok);
-                    }
-                    lastTokenHasBeenQuoted = false;
-                    break;
+    public static Path createDirectory(Path dir) {
+        if (!dir.toFile().exists()) {
+            try {
+                Files.createDirectories(dir);
+            } catch (IOException e) {
+                throw new IllegalStateException(String.format("Cannot create directory %s", dir));
             }
         }
-        if (lastTokenHasBeenQuoted || 0 != current.length()) {
-            list.add(current.toString());
-        }
-        if (state == inQuote || state == inDoubleQuote) {
-            throw new IllegalArgumentException("Unbalanced quotes in " + toProcess);
-        }
-        final String[] args = new String[list.size()];
-        return list.toArray(args);
-    }
-
-    private static void inputStreamsToWrapper(InputStream inputStream, InputStream errorStream, OsCommandWrapper wrapper) {
-        try {
-            if (inputStream.available() > 0) {
-                inputStreamToListOfStrings(inputStream, getConsoleCodepage(), wrapper.getOutput());
-            }
-            if (errorStream.available() > 0) {
-                inputStreamToListOfStrings(errorStream, getConsoleCodepage(), wrapper.getError());
-            }
-        } catch (IOException e) {
-            LOG.log(Level.FINE, "InputStream to wrapper copy error", e);
-        }
-    }
-
-    private static void processInputStreamsToWrapper(Process p, OsCommandWrapper wrapper) {
-        inputStreamsToWrapper(p.getInputStream(), p.getErrorStream(), wrapper);
+        return dir;
     }
 
     /**
-     * Execute wrapped OS command in the same thread.
-     * @param wrapper wrapper
+     * Create file.
+     *
+     * @param file {@link Path}
+     * @return {@link Path}
      */
-    @SuppressWarnings("java:S3776")
-    public static void execute(OsCommandWrapper wrapper) {
-        Process p = null;
-        String[] callee = wrapper.isTranslateCmd() ? translateCommandline(wrapper.getCmd()) : wrapper.getCmd().split(DELIMITER_SPACE);
-        try {
-            if (null == wrapper.getWorkdir()) {
-                p = Runtime.getRuntime().exec(callee);
-            } else {
-                p = Runtime.getRuntime().exec(callee, null, wrapper.getWorkdir().toFile());
+    public static Path createFile(Path file) {
+        if (!file.toFile().exists()) {
+            try {
+                if (!file.getParent().toFile().exists()) {
+                    createDirectory(file.getParent());
+                }
+                Files.createFile(file);
+            } catch (Exception e) {
+                throw new IllegalStateException(String.format("Cannot create file %s", file));
             }
-            if (p != null) {
-                TimeUnit.MILLISECONDS.sleep(PROCESS_INNER_STATE_CHANGE_TIMEOUT);
-                wrapper.setPid((int) p.pid());
-                if (wrapper.hasPid()) {
-                    TimeUnit.MILLISECONDS.sleep(PROCESS_INNER_STATE_CHANGE_TIMEOUT);
-                    if (p.isAlive()) {
-                        while (p.isAlive()) {
-                            TimeUnit.MILLISECONDS.sleep(PROCESS_INNER_STATE_CHANGE_TIMEOUT);
-                            processInputStreamsToWrapper(p, wrapper);
-                        }
-                    }
-                    processInputStreamsToWrapper(p, wrapper);
-                    wrapper.setExitCode(p.exitValue());
-                } else {
-                    wrapper.getError().add("Error creating OS process");
-                    wrapper.setExitCode(EXIT_CODE_ERROR);
+        }
+        return file;
+    }
+
+    /**
+     * Recursively delete files and directories.
+     *
+     * @param path {@link Path}
+     */
+    @SuppressWarnings({"java:S4042", "java:S899"})
+    public static void deleteFilesAndDirectories(Path path) {
+        if (path.toFile().exists() && path.toFile().canWrite()) {
+            if (path.toFile().isDirectory()) {
+                for (File subDir : path.toFile().listFiles()) {
+                    deleteFilesAndDirectories(subDir.toPath());
                 }
             }
-        } catch (IOException e) {
-            LOG.log(Level.SEVERE, "Error executing OS command {0} {1}", new Object[]{wrapper, e.getMessage()});
-            wrapper.setExitCode(EXIT_CODE_ERROR);
-            wrapper.getError().add(e.getLocalizedMessage());
-        } catch (InterruptedException e) {
-            LOG.log(Level.INFO, "OS command execution interrupted {0} {1}", new Object[]{wrapper, e.getMessage()});
-            wrapper.getError().add(e.getLocalizedMessage());
-            Thread.currentThread().interrupt();
+            path.toFile().delete();
         }
-    }
-
-    /**
-     * Execute OS command synchronously.
-     * @param cmd command
-     * @return {@link OsCommandWrapper}
-     */
-    public static OsCommandWrapper execute(String cmd) {
-        OsCommandWrapper wrapper = new OsCommandWrapper(cmd);
-        execute(wrapper);
-        return wrapper;
-    }
-
-    private static void timeoutAndCleanUp(OsCommandWrapper wrapper, Future<Void> future) {
-        wrapper.timeout();
-        future.cancel(true);
-        if (wrapper.hasPid()) {
-            killProcessTree(String.valueOf(wrapper.getPid()));
-        }
-    }
-
-    /**
-     * Execute OS command in another thread.
-     * @param wrapper {@link OsCommandWrapper}
-     */
-    public static void executeAsync(OsCommandWrapper wrapper) {
-        Future<Void> future = OS_CMD_EXECUTOR_SERVICE.submit(new OsCommandCallable(wrapper));
-        try {
-            if (null != wrapper.getMaxExecuteTime()) {
-                future.get(wrapper.getMaxExecuteTime(), TimeUnit.MILLISECONDS);
-            } else {
-                future.get();
-            }
-            if (wrapper.isOverdue() || !future.isDone()) {
-                timeoutAndCleanUp(wrapper, future);
-            } else {
-                wrapper.successOutOfRunning();
-            }
-        } catch (ExecutionException | TimeoutException e) {
-            timeoutAndCleanUp(wrapper, future);
-        } catch (InterruptedException e) {
-            timeoutAndCleanUp(wrapper, future);
-            Thread.currentThread().interrupt();
-        }
-    }
-
-    /**
-     * Execute OS command asynchronously.
-     * @param cmd command
-     * @return {@link OsCommandWrapper}
-     */
-    public static OsCommandWrapper executeAsync(String cmd) {
-        OsCommandWrapper wrapper = new OsCommandWrapper(cmd);
-        executeAsync(wrapper);
-        return wrapper;
-    }
-
-    /**
-     * Execute OS command in another thread.
-     * @param cmd            command
-     * @param maxExecuteTime timeout
-     * @return {@link OsCommandWrapper}
-     */
-    public static OsCommandWrapper executeAsync(String cmd, Integer maxExecuteTime) {
-        OsCommandWrapper wrapper = new OsCommandWrapper(cmd);
-        if (null != maxExecuteTime) {
-            wrapper.setMaxExecuteTime(maxExecuteTime);
-        }
-        executeAsync(wrapper);
-        return wrapper;
     }
 
     /**
      * Get PID list for a given parent PID.
+     *
      * @param parentPid PPID
      * @return PID list
      */
@@ -591,7 +601,7 @@ public final class OsUtils {
         } else if (isLinux()) {
             command = "pgrep -P " + parentPid;
         }
-        temp = execute(command).getOutput();
+        temp = OsCommandWrapper.execute(command).getOutput();
         if (!temp.isEmpty()) {
             if (isLinux()) {
                 result = new ArrayList<>(temp);
@@ -615,9 +625,10 @@ public final class OsUtils {
 
     /**
      * Kill process tree.
+     *
      * @param rootPid PID of the root process
      */
-    private static void killProcessTree(String rootPid) {
+    static void killProcessTree(String rootPid) {
         StringJoiner joiner = new StringJoiner(DELIMITER_SPACE);
         List<String> pids = getChildrenPidByParentPid(rootPid);
         pids.add(rootPid);
@@ -629,78 +640,14 @@ public final class OsUtils {
             }
         } else {
             joiner.add("kill -9");
-            joiner.add(collectionOfStringsToString(pids, DELIMITER_SPACE));
+            joiner.add(listOfStringsToString(pids, DELIMITER_SPACE));
         }
-        execute(joiner.toString());
-    }
-
-    /**
-     * Create directory.
-     * @param dir {@link Path}
-     * @return {@link Path}
-     */
-    public static Path createDirectory(Path dir) {
-        if (!dir.toFile().exists()) {
-            try {
-                Files.createDirectories(dir);
-            } catch (IOException e) {
-                throw new IllegalStateException(String.format("Cannot create directory %s",dir));
-            }
-        }
-        return dir;
-    }
-
-    /**
-     * Create file.
-     * @param file {@link Path}
-     * @return {@link Path}
-     */
-    public static Path createFile(Path file) {
-        if (!file.toFile().exists()) {
-            try {
-                if (!file.getParent().toFile().exists()) {
-                    createDirectory(file.getParent());
-                }
-                Files.createFile(file);
-            } catch (Exception e) {
-                throw new IllegalStateException(String.format("Cannot create file %s", file));
-            }
-        }
-        return file;
-    }
-
-    /**
-     * Recursively delete files and directories.
-     * @param path {@link Path}
-     */
-    @SuppressWarnings({"java:S4042", "java:S899"})
-    public static void deleteFilesAndDirectories(Path path) {
-        if (path.toFile().exists() && path.toFile().canWrite()) {
-            if (path.toFile().isDirectory()) {
-                for (File subDir : path.toFile().listFiles()) {
-                    deleteFilesAndDirectories(subDir.toPath());
-                }
-            }
-            path.toFile().delete();
-        }
-    }
-
-    /**
-     * Copy {@link InputStream} to {@link OutputStream}.
-     * @param input  {@link InputStream}
-     * @param output {@link OutputStream}
-     * @throws IOException read or write
-     */
-    public static void copy(InputStream input, OutputStream output) throws IOException {
-        int bytesRead;
-        final byte[] buffer = new byte[BUFFER_SIZE];
-        while ((bytesRead = input.read(buffer)) != -1) {
-            output.write(buffer, 0, bytesRead);
-        }
+        OsCommandWrapper.execute(joiner.toString());
     }
 
     /**
      * Is Process running?.
+     *
      * @param pidStr Process ID string
      * @return is running?
      */
@@ -716,7 +663,7 @@ public final class OsUtils {
 
     private static boolean isProcessRunning(String pid, String command) {
         OsCommandWrapper wrapper = new OsCommandWrapper(command);
-        execute(wrapper);
+        OsCommandWrapper.execute(wrapper);
         if (wrapper.isOK()) {
             String expected = pid;
             String actual = wrapper.getOutputString();
@@ -726,17 +673,18 @@ public final class OsUtils {
     }
 
     /**
-     * Получить список PID экземпляров процесса по его имени.
-     * @param processName имя процесса
-     * @return список PID экземпляров процесса
+     * Get process PIDs by process name.
+     *
+     * @param processName name of the process
+     * @return PIDs {@link Collection}
      */
-    public static List<String> getProcessIdByProcessName(String processName) {
+    public static Collection<String> getProcessIdByProcessName(String processName) {
         List<String> result = new ArrayList<>();
         if (isLinux()) {
-            result = execute("pgrep -f " + processName).getOutput();
+            result = OsCommandWrapper.execute("pgrep -f " + processName).getOutput();
         }
         if (isWmicWindows()) {
-            List<String> raw = execute("wmic process where \"name like \'%" + processName + "%\'\" get processid").getOutput();
+            List<String> raw = OsCommandWrapper.execute("wmic process where \"name like \'%" + processName + "%\'\" get processid").getOutput();
             if (raw.size() > 2) {
                 for (int i = FIRST_PROCESS_ID_INDEX; i < raw.size(); i++) {
                     if (!isBlank(raw.get(i).trim())) {
@@ -746,5 +694,65 @@ public final class OsUtils {
             }
         }
         return result;
+    }
+
+    /**
+     * {@link InputStream} to {@link String} {@link List}.
+     *
+     * @param source  {@link InputStream}
+     * @param charset charset {@link Charset}
+     * @param inout   {@link String} {@link List} lines
+     */
+    public static void inputStreamToListOfStrings(InputStream source, Charset charset, List<String> inout) {
+        String line;
+        try (InputStreamReader inputStreamReader = new InputStreamReader(source, charset);
+             BufferedReader bufferedReader = new BufferedReader(inputStreamReader)) {
+            while ((line = bufferedReader.readLine()) != null) {
+                inout.add(line);
+            }
+        } catch (IOException e) {
+            // no interest in
+        }
+    }
+
+    /**
+     * Join {@link String} {@link List} to {@link String}.
+     *
+     * @param c {@link String} {@link List}
+     * @param d delimiter
+     * @return join
+     */
+    private static String listOfStringsToString(List<String> c, String d) {
+        if (null != c && !c.isEmpty()) {
+            StringJoiner joiner = new StringJoiner(d);
+            for (String item : c) {
+                if (!isBlank(item)) {
+                    joiner.add(item);
+                }
+            }
+            return joiner.toString();
+        } else {
+            return EMPTY_STRING;
+        }
+    }
+
+    /**
+     * Is {@link CharSequence} blank?.
+     *
+     * @param cs {@link CharSequence}
+     * @return is blank?
+     */
+    public static boolean isBlank(final CharSequence cs) {
+        if (null != cs) {
+            final int strLen = cs.length();
+            if (0 != strLen) {
+                for (int i = 0; i < strLen; i++) {
+                    if (!Character.isWhitespace(cs.charAt(i))) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
     }
 }

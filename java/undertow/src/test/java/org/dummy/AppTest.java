@@ -1,13 +1,13 @@
 package org.dummy;
 
 import java.util.concurrent.TimeUnit;
-
-import org.apache.catalina.startup.Tomcat;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 
+import io.undertow.Undertow;
+
 class AppTest extends AppBaseTest {
-    static Tomcat HTTP_SERVER = null;
+    static Undertow HTTP_SERVER = null;
 
     AppTest() {
         super();
